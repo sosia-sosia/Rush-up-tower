@@ -227,10 +227,9 @@ function pull(){
 const IMG={},DIR="";
 const imgPath=n=>DIR+n+".png";
 let pending=0,booted=false;
-function setStartLogo(){$("sLogo").innerHTML=`<img src="${imgPath("Glogo")}" alt="Rush up tower">`}
-function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n==="Glogo")setStartLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
+function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
 function fin(){if(--pending<=0)boot()}
-function boot(){if(booted)return;booted=true;setW("battle");if(IMG.Glogo)swapLogo();if(IMG.Glogo)setStartLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
+function boot(){if(booted)return;booted=true;setW("battle");if(IMG.Glogo)swapLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
 const face=en=>IMG[en.img]?`<img src="${imgPath(en.img)}" alt="">`:en.e;
 let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
