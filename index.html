@@ -145,7 +145,7 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
 const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,healPerLv:3,healCd:10,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:3}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
-  cost:{base:10,growth:1.25},
+  cost:{base:10,growth:1.15},
   scale:{hp:1.17,atk:1.12,coin:1.14,coin2:1.2},
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:3,atk:1.5,coin:5},
@@ -161,7 +161,7 @@ const AREAS=[
  {name:"第5エリア",bg:"Gbg9",bossBg:"Gbg10",sky:"linear-gradient(#222,#7a2a2a)",ground:"repeating-linear-gradient(90deg,#555 0 30px,#444 30px 60px)"}
 ];
 // ===== モンスター（N階=N番目。画像は Gmon<N>.png。能力補正は MON_MOD[階]={hp,atk,coin} で個別指定可） =====
-const MONS="ホーンラビット,キラービー,スライム,マンイーター,ゾンビ,ゾンビ犬,呪い猫,ゴブリン,リザードマン,トロール,マンドラゴラ,腐敗樹,苔人間,デスプラント,食人木,腐敗妖精,呪われた樹精,メタルマンティス,トレント,ウィッププラント,呪肉,エクトプラズム,幽魚,半漁人,カースアイ,彷徨う魂,貴腐人,血の使用人,死術死,呪われた伯爵,インプ,メタルシザー,メタルストーカー,メタルゴブリン,スケルトンアーチャー,ポイズングール,古きもの,ダークエルフ,墓堀ゾンビ,ダークフェアリー,デスナイト,ウルフマン,邪悪な意思,ブルーオーガ,闇の呼び声,終焉の書,リビングアーマー,ハンズビースト,キマイラ,鉄球兵".split(",").map((n,i)=>({n,img:"Gmon"+(i+1)}));
+const MONS="ホーンラビット,キラービー,スライム,マンイーター,ゾンビ,ゾンビ犬,呪い猫,ゴブリン,リザードマン,トロール,マンドラゴラ,腐敗樹,苔人間,デスプラント,食人木,腐敗妖精,呪われた樹精,メタルマンティス,トレント,ウィッププラント,呪肉,エクトプラズム,幽魚,半漁人,カースアイ,彷徨う魂,貴腐人,血の使用人,死術師,呪われた伯爵,インプ,メタルシザー,メタルストーカー,メタルゴブリン,スケルトンアーチャー,ポイズングール,古きもの,ダークエルフ,墓堀ゾンビ,ダークフェアリー,デスナイト,ウルフマン,邪悪な意思,ブルーオーガ,闇の呼び声,終焉の書,リビングアーマー,ハンズビースト,キマイラ,鉄球兵".split(",").map((n,i)=>({n,img:"Gmon"+(i+1)}));
 const MON_MOD={};
 // ===== 装備・ガチャ（v=基礎効果=強化ごとの加算値。tier:1通常/2改/3真） =====
 const ITEMS={
