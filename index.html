@@ -57,6 +57,7 @@ input{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;widt
 #msg{position:absolute;left:0;right:0;top:40%;text-align:center;font-size:20px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000;white-space:pre-line;pointer-events:none}
 .stat{text-align:center;font-size:12px;padding:6px}.stat b{display:block;font-size:16px}
 .col{display:flex;flex-direction:column;gap:8px}.col[hidden]{display:none}
+#upg,#gacha{padding-bottom:calc(20vh + 10px)}
 .card{font-size:13px;border:3px solid transparent}.card.t2{border-color:#4aa8ff}.card.t3{border-color:#ffc800}.card.sel{border-color:#ff8a3d;background:#fff0d8}
 .card.off{background:rgba(20,20,25,.85);color:#777}.card b{font-size:15px}
 .tabs button{background:#9aa3b2}.tabs button.on{background:#ff8a3d}
@@ -99,7 +100,7 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
 <div class="scr" id="upg" hidden>
  <h2 style="margin:0">強化</h2>
  <div class="panel">🪙 コイン：<span id="uCoins"></span></div>
- <button id="uAtk"></button><button id="uHp" class="green"></button><button id="uSpd" class="blue"></button><button id="uHeal" style="background:#b36bff"></button><button id="uDef" style="background:#7a8cff"></button><button id="uBuff" style="background:#ff5a8a"></button><button id="uDb" style="background:#4a7cff"></button>
+ <button id="uAtk"></button><button id="uHp" class="green"></button><button id="uSpd" class="blue"></button><button id="uDef" style="background:#7a8cff"></button><button id="uBuff" style="background:#ff5a8a"></button><button id="uDb" style="background:#4a7cff"></button><button id="uHeal" style="background:#b36bff"></button><button id="uCoin" style="background:#e6a100"></button>
  <button class="blue" id="bUpBack">メニューへ</button>
 </div>
 
@@ -145,6 +146,7 @@ const CFG={
   scale:{hp:1.17,atk:1.12,coin:1.14},
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:3,atk:1.5,coin:5},
+  coinUp:{floors:[10,20,30,40],add:10,cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。1回につき敵1体のコイン+add
   gacha:{slots:2,maxEnh:10,mat:5,enhCost:lv=>500*(lv+1),regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
 };
 // ===== エリア定義（追加はここに足すだけ） =====
@@ -171,7 +173,7 @@ const GACHAS=[{id:"adv",name:"冒険者ガチャ",cost:100,pool:[
  {coin:1000,rate:1}]}];
 function eqv(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&it.stat===st?it.v*(1+o.lv):0)},0)}
 const $=id=>document.getElementById(id),KEY="towerGameSave1",TOTAL=AREAS.length*CFG.floorsPerArea;
-let S={coins:0,atkLv:0,hpLv:0,spdLv:0,healLv:0,defLv:0,buffLv:0,dbLv:0,size:1,best:0,inv:{},equip:[]};
+let S={coins:0,atkLv:0,hpLv:0,spdLv:0,healLv:0,defLv:0,buffLv:0,dbLv:0,size:1,best:0,inv:{},equip:[],cnLv:0,reach:0};
 try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d)S=Object.assign(S,d)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 document.addEventListener("contextmenu",e=>e.preventDefault());
@@ -234,7 +236,7 @@ function setBgm(n){if(n===bgmName)return;bgmName=n;if(bgmCur){bgmCur.pause();bgm
 document.addEventListener("pointerdown",()=>{if(bgmCur&&bgmCur.paused&&!document.hidden)bgmCur.play().catch(()=>{})});
 document.addEventListener("visibilitychange",()=>{if(!bgmCur)return;if(document.hidden)bgmCur.pause();else bgmCur.play().catch(()=>{})});
 const CANCEL=["bUpBack","bGBack","bToMenu","bTitle","bRet"];
-const KY=["uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
+const KY=["uCoin","uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled||PW.indexOf(b.id)>=0)return;
   if(KY.indexOf(b.id)>=0||b.dataset.en){se("se_kyouka.mp3");return}
   se(CANCEL.indexOf(b.id)>=0?"se_cancel.mp3":"se_confirm.mp3")});
@@ -281,6 +283,9 @@ function ui(){
   up("uDef","🛡️ 防御力",S.defLv,`${def()} → ${def()+CFG.player.defPerLv}`);
   const c2=cost(S.buffLv);$("uBuff").innerHTML=`🔥 攻撃アップ Lv${S.buffLv}<small>+${CFG.player.buffPerLv*S.buffLv} → +${CFG.player.buffPerLv*(S.buffLv+1)} (${CFG.player.buffDur}秒) ／ 🪙${c2}</small>`;$("uBuff").disabled=S.coins<c2;
   up("uDb","🔰 防御アップ",S.dbLv,`+${CFG.player.dbPerLv*S.dbLv} → +${CFG.player.dbPerLv*(S.dbLv+1)} (${CFG.player.dbDur}秒)`);
+  {const U=CFG.coinUp,l=S.cnLv,mx=l>=U.floors.length,need=U.floors[l],c=U.cost(l),rc=Math.max(S.reach||0,S.best),a=U.add;
+   $("uCoin").innerHTML=mx?`🪙 コイン獲得強化 Lv${l}<small>MAX（+${a*l}）</small>`:rc<need?`🔒 コイン獲得強化 Lv${l}<small>${need}階に到達で解放</small>`:`🪙 コイン獲得強化 Lv${l}<small>+${a*l} → +${a*(l+1)}（${need}階到達） ／ 🪙${c}</small>`;
+   $("uCoin").disabled=mx||rc<need||S.coins<c}
   $("floor").textContent=G.floor+"F"+(G.en&&G.en.boss?" 👑":"");$("area").textContent=areaOf(G.floor).name;
   $("sHp").textContent=`${Math.max(0,Math.ceil(G.hp))}/${maxHp()}`;$("sAtk").textContent=atk();$("sDef").textContent=def();$("sRun").textContent=G.run;$("sBest").textContent=S.best;
   $("hpw").firstChild.style.width=Math.max(0,G.hp/maxHp()*100)+"%";$("lw").textContent=`HP ${Math.max(0,Math.ceil(G.hp))}`;
@@ -297,7 +302,7 @@ function lunge(el,dir){el.style.setProperty("--d",dir*22+"px");el.classList.add(
 function flash(el){el.classList.add("hit");setTimeout(()=>el.classList.remove("hit"),100)}
 // ===== 戦闘 =====
 function spawn(){
-  G.en=Object.assign({},pre(G.floor));const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en);e.style.fontSize=G.en.boss?"84px":"58px";
+  G.en=Object.assign({},pre(G.floor));S.reach=Math.max(S.reach||0,G.floor);const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en);e.style.fontSize=G.en.boss?"84px":"58px";
   G.phase="approach";G.t=0;G.wx=-15;G.ex=88;G.wCd=0.3;G.eCd=0.8;say(G.en.boss?"BOSS！":"");$("w").className="ch";place();layout();ui();
 }
 function start(){
@@ -331,8 +336,8 @@ function step(dt){
     if(G.wCd<=0){G.wCd+=1/aspd();const d=atk();G.en.hp-=d;lunge($("w"),1);flash($("e"));float(G.ex,d,"#ffe14a");se("se_damage.mp3")}
     if(G.en.hp>0&&G.eCd<=0){G.eCd+=1/CFG.base.aspd;const dm=Math.max(1,G.en.atk-def());G.hp-=dm;lunge($("e"),-1);flash($("w"));float(G.wx,dm,"#ff8a8a");se("se_damage.mp3")}
     if(G.en.hp<=0){
-      G.en.hp=0;S.coins+=G.en.coin;G.run+=G.en.coin;S.best=Math.max(S.best,G.floor);
-      $("e").classList.add("die");se("se_monster_kill.mp3");float(G.ex,"+"+G.en.coin+"🪙","#ffd84a");save();
+      G.en.hp=0;const gc=G.en.coin+CFG.coinUp.add*S.cnLv;S.coins+=gc;G.run+=gc;S.best=Math.max(S.best,G.floor);
+      $("e").classList.add("die");se("se_monster_kill.mp3");float(G.ex,"+"+gc+"🪙","#ffd84a");save();
       if(G.floor>=TOTAL){end("塔を制覇した！🎉");return}
       G.phase="clear";G.t=0;
     }else if(G.hp<=0){G.hp=0;$("w").classList.add("die");se("se_monster_kill.mp3");end("やられた…");return}
@@ -360,7 +365,8 @@ $("bToMenu").onclick=()=>show("menu");
 $("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("にげた！")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
 const buy=(id,key,base)=>$(id).onclick=()=>{const c=cost(S[key]-base);if(S.coins>=c){S.coins-=c;S[key]++;save();ui()}};
-buy("uAtk","atkLv",0);buy("uHp","hpLv",0);buy("uSpd","spdLv",0);buy("uHeal","healLv",0);buy("uDef","defLv",0);buy("uBuff","buffLv",0);buy("uDb","dbLv",0);
+buy("uAtk","atkLv",0);buy("uHp","hpLv",0);buy("uSpd","spdLv",0);buy("uHeal","healLv",0);
+$("uCoin").onclick=()=>{const U=CFG.coinUp,l=S.cnLv,c=U.cost(l),rc=Math.max(S.reach||0,S.best);if(l<U.floors.length&&rc>=U.floors[l]&&S.coins>=c){S.coins-=c;S.cnLv++;save();ui()}};buy("uDef","defLv",0);buy("uBuff","buffLv",0);buy("uDb","dbLv",0);
 function applySize(){const z=+S.size||1;document.body.style.zoom=z;document.querySelectorAll(".sz").forEach(b=>b.classList.toggle("on",+b.dataset.z===z))}
 document.querySelectorAll(".sz").forEach(b=>b.onclick=()=>{S.size=+b.dataset.z;save();applySize()});
 $("bToUpg").onclick=()=>show("upg");$("bUpBack").onclick=()=>show("menu");$("bTitle").onclick=()=>show("start");
