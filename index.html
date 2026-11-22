@@ -145,11 +145,11 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
 const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,healPerLv:3,healCd:10,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:3}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
-  cost:{base:10,growth:1.15},
+  cost:{base:10,growth:1.10},
   scale:{hp:1.17,atk:1.12,coin:1.14,coin2:1.2},
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:3,atk:1.5,coin:5},
-  coinUp:{floors:[10,20,30,40],add:[10,20,30,40],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化ごとの加算量(add配列・累計) 敵1体あたり
+  coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
   gacha:{slots:2,maxEnh:10,mat:5,enhCost:(lv,tier)=>[50,150,300][tier-1]*(lv+1),regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
 };
 // ===== エリア定義（追加はここに足すだけ） =====
@@ -169,7 +169,7 @@ const ITEMS={
  arm1:{n:"守りの腕輪",icon:"📿",stat:"def",v:2,tier:1},arm2:{n:"守りの腕輪・改",icon:"📿",stat:"def",v:4,tier:2},arm3:{n:"守りの腕輪・真",icon:"📿",stat:"def",v:8,tier:3},
  bro1:{n:"回復のブローチ",icon:"🏵️",stat:"heal",v:5,tier:1},bro2:{n:"回復のブローチ・改",icon:"🏵️",stat:"heal",v:10,tier:2},bro3:{n:"回復のブローチ・真",icon:"🏵️",stat:"heal",v:20,tier:3}
 };
-function coinBonus(l){return CFG.coinUp.add.slice(0,l).reduce((x,y)=>x+y,0)}
+function coinBonus(l){return l>0?CFG.coinUp.add[l-1]:0}
 const GACHAS=[{id:"adv",name:"冒険者ガチャ",cost:100,pool:[
  {id:"ring1",rate:20},{id:"arm1",rate:20},{id:"bro1",rate:20},
  {id:"ring2",rate:10},{id:"arm2",rate:10},{id:"bro2",rate:10},
