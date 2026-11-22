@@ -14,6 +14,12 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino M
 h2,#start h1,#logo h1{background:rgba(255,255,255,.92);color:#3a2a1a;padding:6px 16px;border-radius:14px;display:inline-block}
 h2{align-self:flex-start}
 h1:has(img){background:none!important;padding:0!important}
+#sLogo{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:80%;text-align:center}
+#sLogo img{width:100%;display:block}
+#sLogo h1.cool{background:none;color:#ffd84a;font-size:46px;line-height:1.05;font-style:italic;font-weight:900;letter-spacing:1px;padding:0;margin:0;text-shadow:3px 3px 0 #c2410c,0 0 18px #ff9f1c;-webkit-text-stroke:2px #7a2e00}
+#bStart{position:absolute;left:50%;top:80%;transform:translate(-50%,-50%);width:70%}
+#bStart:active{transform:translate(-50%,calc(-50% + 3px))}
+#pass{position:absolute;left:10px;right:10px;top:56px;z-index:2;width:auto!important}
 @media (min-width:600px){html,body{background:#111}.scr{background:var(--bg);box-shadow:0 0 30px #000}}
 .center{justify-content:center;align-items:center;text-align:center}
 h1{font-size:34px;margin:0}
@@ -68,7 +74,7 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
 
 <div class="scr center" id="start" hidden>
  <button id="adm">🔧 管理者</button>
- <div class="big">🤺</div><h1>Rush up tower</h1>
+ <div id="sLogo"><h1 class="cool">Rush up tower</h1></div>
  <button class="blue" id="bStart">スタート</button>
  <div id="pass" class="panel" hidden style="width:100%"><div>パスワード</div><input id="pw" type="password" inputmode="numeric"><button id="pwOk" class="green" style="margin-top:8px">OK</button><div id="pwErr" style="color:#e0566b"></div></div>
 </div>
@@ -221,10 +227,10 @@ function pull(){
 const IMG={},DIR="";
 const imgPath=n=>DIR+n+".png";
 let pending=0,booted=false;
-function hideTitleText(){document.querySelectorAll("#start .big,#start h1").forEach(x=>x.remove())}
-function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n==="Gtitle")hideTitleText();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
+function setStartLogo(){$("sLogo").innerHTML=`<img src="${imgPath("Glogo")}" alt="Rush up tower">`}
+function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n==="Glogo")setStartLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
 function fin(){if(--pending<=0)boot()}
-function boot(){if(booted)return;booted=true;setW("battle");if(IMG.Glogo)swapLogo();if(IMG.Gtitle)hideTitleText();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
+function boot(){if(booted)return;booted=true;setW("battle");if(IMG.Glogo)swapLogo();if(IMG.Glogo)setStartLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
 const face=en=>IMG[en.img]?`<img src="${imgPath(en.img)}" alt="">`:en.e;
 let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
