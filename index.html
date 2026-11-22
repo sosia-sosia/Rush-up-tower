@@ -85,6 +85,8 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
  <h2 style="margin:0">管理者画面</h2>
  <div class="panel">🪙 現在のコイン：<span id="aCoins"></span></div>
  <button id="bAdd">🪙 コインを100追加</button>
+ <button id="bAdd1k">🪙 コインを1000追加</button>
+ <button id="bAdd10k">🪙 コインを10000追加</button>
  <button class="blue" id="bToMenu">メニューへ</button>
 </div>
 
@@ -143,7 +145,7 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
 const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,healPerLv:3,healCd:10,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:3}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
-  cost:{base:10,growth:1.35},
+  cost:{base:10,growth:1.25},
   scale:{hp:1.17,atk:1.12,coin:1.14,coin2:1.2},
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:3,atk:1.5,coin:5},
@@ -362,7 +364,7 @@ $("logo").onclick=()=>show("start");
 $("bStart").onclick=()=>show("menu");
 $("adm").onclick=()=>{$("pass").hidden=!$("pass").hidden;$("pw").value="";$("pwErr").textContent=""};
 $("pwOk").onclick=()=>{if($("pw").value==="198505"){$("pass").hidden=true;show("admin")}else $("pwErr").textContent="パスワードがちがいます"};
-$("bAdd").onclick=()=>{S.coins+=100;save();ui()};
+$("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};
 $("bToMenu").onclick=()=>show("menu");
 $("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("にげた！")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
