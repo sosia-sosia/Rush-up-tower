@@ -226,6 +226,15 @@ function pull(){
 // ===== 画像（images/フォルダ。無ければ絵文字・グラデーションで表示） =====
 const IMG={},DIR="";
 const imgPath=n=>DIR+n+".png";
+// ===== 音（ファイルは index.html と同じフォルダ。無ければ無音） =====
+const SND={se:.7,bgm:.5};
+let bgmCur=null,bgmName="";
+function se(n){try{const a=new Audio(DIR+n);a.volume=SND.se;a.play().catch(()=>{})}catch(e){}}
+function setBgm(n){if(n===bgmName)return;bgmName=n;if(bgmCur){bgmCur.pause();bgmCur=null}if(!n)return;try{bgmCur=new Audio(DIR+n);bgmCur.loop=true;bgmCur.volume=SND.bgm;bgmCur.play().catch(()=>{})}catch(e){}}
+document.addEventListener("pointerdown",()=>{if(bgmCur&&bgmCur.paused&&!document.hidden)bgmCur.play().catch(()=>{})});
+document.addEventListener("visibilitychange",()=>{if(!bgmCur)return;if(document.hidden)bgmCur.pause();else bgmCur.play().catch(()=>{})});
+const CANCEL=["bUpBack","bGBack","bToMenu","bTitle","bRet"];
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled||b.id==="bHeal")return;se(CANCEL.indexOf(b.id)>=0?"se_cancel.mp3":"se_confirm.mp3")});
 let pending=0,booted=false;
 function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
 function fin(){if(--pending<=0)boot()}
@@ -235,7 +244,7 @@ let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
 function swapLogo(){document.querySelectorAll("#logo .big").forEach(x=>x.remove());document.querySelectorAll("#logo h1").forEach(h=>h.innerHTML=`<img src="${imgPath("Glogo")}" style="max-width:360px;width:80%" alt="Rush up tower">`)}
 // ===== 画面 =====
-function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();ui()}
+function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha"].indexOf(n)>=0?"menu1.mp3":"");ui()}
 // ===== 部屋の積み上げ表示 =====
 const rooms={};
 const SLOT={2:[-80,80],1:[0,80],0:[80,170],"-1":[250,70],"-2":[320,70]};
@@ -297,7 +306,7 @@ function end(msg){
 }
 function doHeal(){
   if(G.cd>0||G.phase==="idle"||G.phase==="over")return;
-  const h=Math.min(heal(),maxHp()-G.hp);G.hp+=h;G.cd=CFG.player.healCd;float(G.wx,"+"+heal(),"#7dff9a");ui();
+  const h=Math.min(heal(),maxHp()-G.hp);G.hp+=h;G.cd=CFG.player.healCd;float(G.wx,"+"+heal(),"#7dff9a");se("se_heal.mp3");ui();
 }
 function doBuff(){
   if(G.bcd>0||G.phase==="idle"||G.phase==="over")return;
@@ -310,20 +319,20 @@ function doDb(){
 function step(dt){
   if(G.phase==="idle"||G.phase==="over")return;
   if(G.cd>0)G.cd=Math.max(0,G.cd-dt);if(G.bcd>0)G.bcd=Math.max(0,G.bcd-dt);if(G.buff>0)G.buff=Math.max(0,G.buff-dt);if(G.dbcd>0)G.dbcd=Math.max(0,G.dbcd-dt);if(G.dbuff>0)G.dbuff=Math.max(0,G.dbuff-dt);
-  G.rt-=dt;if(G.rt<=0){G.rt+=CFG.gacha.regenSec;const h=eqv("heal");if(h>0){G.hp=Math.min(maxHp(),G.hp+h);float(Math.max(10,Math.min(80,G.wx)),"+"+h,"#7dff9a")}}
+  G.rt-=dt;if(G.rt<=0){G.rt+=CFG.gacha.regenSec;const h=eqv("heal");if(h>0){G.hp=Math.min(maxHp(),G.hp+h);float(Math.max(10,Math.min(80,G.wx)),"+"+h,"#7dff9a");se("se_heal.mp3")}}
   if(G.phase==="approach"){
     G.t+=dt;const p=Math.min(1,G.t/0.9);G.wx=-15+p*59;G.ex=88-p*26;
     if(p>=1){G.phase="fight";$("w").classList.remove("run")}
   }else if(G.phase==="fight"){
     G.wCd-=dt;G.eCd-=dt;
-    if(G.wCd<=0){G.wCd+=1/aspd();const d=atk();G.en.hp-=d;lunge($("w"),1);flash($("e"));float(G.ex,d,"#ffe14a")}
-    if(G.en.hp>0&&G.eCd<=0){G.eCd+=1/CFG.base.aspd;const dm=Math.max(1,G.en.atk-def());G.hp-=dm;lunge($("e"),-1);flash($("w"));float(G.wx,dm,"#ff8a8a")}
+    if(G.wCd<=0){G.wCd+=1/aspd();const d=atk();G.en.hp-=d;lunge($("w"),1);flash($("e"));float(G.ex,d,"#ffe14a");se("se_damage.mp3")}
+    if(G.en.hp>0&&G.eCd<=0){G.eCd+=1/CFG.base.aspd;const dm=Math.max(1,G.en.atk-def());G.hp-=dm;lunge($("e"),-1);flash($("w"));float(G.wx,dm,"#ff8a8a");se("se_damage.mp3")}
     if(G.en.hp<=0){
       G.en.hp=0;S.coins+=G.en.coin;G.run+=G.en.coin;S.best=Math.max(S.best,G.floor);
-      $("e").classList.add("die");float(G.ex,"+"+G.en.coin+"🪙","#ffd84a");save();
+      $("e").classList.add("die");se("se_monster_kill.mp3");float(G.ex,"+"+G.en.coin+"🪙","#ffd84a");save();
       if(G.floor>=TOTAL){end("塔を制覇した！🎉");return}
       G.phase="clear";G.t=0;
-    }else if(G.hp<=0){G.hp=0;$("w").classList.add("die");end("やられた…");return}
+    }else if(G.hp<=0){G.hp=0;$("w").classList.add("die");se("se_monster_kill.mp3");end("やられた…");return}
   }else if(G.phase==="clear"){
     G.t+=dt;
     if(G.t>=0.5){G.phase="out";G.t=0;$("w").classList.add("run")}
