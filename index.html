@@ -69,6 +69,12 @@ input{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;widt
 .cf{position:fixed;top:-30px;font-size:26px;animation:fall 2.2s linear forwards;pointer-events:none;z-index:9}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
 table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:3px 2px;border-bottom:1px solid #0002}
+select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;min-width:0;background:#fff;color:#3a2a1a}
+#amBox{margin-top:8px;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:repeating-conic-gradient(#ddd 0 25%,#fff 0 50%) 0 0/16px 16px}
+#amImg{max-width:100%;height:auto;display:block}
+#amMiss{font-size:12px;color:#c0392b;padding:8px;text-align:center}
+.elrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.el{background:#9aa3b2;min-height:44px;padding:6px 2px;font-size:13px}.el.on{background:#4aa8ff}
 .sz{background:#9aa3b2}.sz.on{background:#4aa8ff}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 </style></head><body>
@@ -87,6 +93,12 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
  <button id="bAdd">🪙 コインを100追加</button>
  <button id="bAdd1k">🪙 コインを1000追加</button>
  <button id="bAdd10k">🪙 コインを10000追加</button>
+ <div class="panel"><div>🎨 モンスター属性カラー確認</div>
+  <div class="row" style="margin-top:6px"><button id="amPrev" class="el" style="flex:0 0 52px">◀</button><select id="amSel"></select><button id="amNext" class="el" style="flex:0 0 52px">▶</button></div>
+  <div id="amBox"><img id="amImg" alt=""><div id="amMiss" hidden></div></div>
+  <div id="amCap" style="text-align:center;margin-top:6px;font-size:13px"></div>
+  <div id="amEl" class="elrow"></div>
+ </div>
  <button class="blue" id="bToMenu">メニューへ</button>
 </div>
 
@@ -266,7 +278,7 @@ let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
 function swapLogo(){document.querySelectorAll("#logo .big").forEach(x=>x.remove());document.querySelectorAll("#logo h1").forEach(h=>h.innerHTML=`<img src="${imgPath("Glogo")}" style="max-width:360px;width:80%" alt="Rush up tower">`)}
 // ===== 画面 =====
-function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip"].indexOf(n)>=0?"menu1.mp3":"");ui()}
+function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();if(n==="admin")renderAm();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip"].indexOf(n)>=0?"menu1.mp3":"");ui()}
 // ===== 部屋の積み上げ表示 =====
 const rooms={};
 const SLOT={2:[-80,80],1:[0,80],0:[80,170],"-1":[250,70],"-2":[320,70]};
@@ -383,6 +395,33 @@ $("adm").onclick=()=>{$("pass").hidden=!$("pass").hidden;$("pw").value="";$("pwE
 $("pwOk").onclick=()=>{if($("pw").value==="198505"){$("pass").hidden=true;show("admin")}else $("pwErr").textContent="パスワードがちがいます"};
 $("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};
 $("bToMenu").onclick=()=>show("menu");
+// ===== 管理者：モンスター属性カラー確認（プレビュー画像だけにfilterを適用。画像ファイル・戦闘画面は変更しない） =====
+// sepiaで元の色味を揃えてから hue-rotate で目的の色へ寄せ、saturate/brightness/contrast で調整
+const ELEM_FILTERS=[
+ {k:"normal",n:"通常",f:"none"},
+ {k:"fire",n:"🔥 火",f:"sepia(.7) hue-rotate(-40deg) saturate(3.2) brightness(1.05) contrast(1.05)"},
+ {k:"water",n:"💧 水",f:"sepia(.7) hue-rotate(165deg) saturate(3) brightness(1.05)"},
+ {k:"thunder",n:"⚡ 雷",f:"sepia(.8) hue-rotate(8deg) saturate(3.5) brightness(1.25) contrast(1.05)"},
+ {k:"wind",n:"🌪️ 風",f:"sepia(.7) hue-rotate(75deg) saturate(2.6) brightness(1.05)"},
+ {k:"dark",n:"🌑 闇",f:"sepia(.7) hue-rotate(235deg) saturate(2.4) brightness(.6) contrast(1.25)"},
+ {k:"light",n:"✨ 光",f:"sepia(.4) hue-rotate(5deg) saturate(1.8) brightness(1.55) contrast(.95)"}
+];
+let amIdx=0,amKey="normal";
+function renderAm(){
+  const m=MONS[amIdx],f=ELEM_FILTERS.find(e=>e.k===amKey),img=$("amImg"),src=imgPath(m.img);
+  $("amSel").value=amIdx;
+  if(img.getAttribute("src")!==src){$("amMiss").hidden=true;img.style.visibility="visible";img.src=src}
+  img.style.filter=f.f;
+  $("amCap").textContent=`${amIdx+1}. ${m.n}（${f.n}）`;
+  document.querySelectorAll("#amEl .el").forEach(b=>b.classList.toggle("on",b.dataset.k===amKey));
+}
+$("amSel").innerHTML=MONS.map((m,i)=>`<option value="${i}">${i+1}. ${m.n}</option>`).join("");
+$("amEl").innerHTML=ELEM_FILTERS.map(e=>`<button class="el" data-k="${e.k}">${e.n}</button>`).join("");
+$("amImg").onerror=()=>{$("amImg").style.visibility="hidden";$("amMiss").textContent="画像が見つかりません："+$("amImg").getAttribute("src");$("amMiss").hidden=false};
+$("amSel").onchange=()=>{amIdx=+$("amSel").value;renderAm()};
+$("amPrev").onclick=()=>{amIdx=(amIdx+MONS.length-1)%MONS.length;renderAm()};
+$("amNext").onclick=()=>{amIdx=(amIdx+1)%MONS.length;renderAm()};
+$("amEl").onclick=e=>{const b=e.target.closest("button");if(b){amKey=b.dataset.k;renderAm()}};
 $("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("にげた！")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
 const buy=(id,key,base)=>$(id).onclick=()=>{const c=cost(S[key]-base);if(S.coins>=c){S.coins-=c;S[key]++;save();ui()}};
