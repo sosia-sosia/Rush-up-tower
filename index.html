@@ -9,7 +9,7 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;touch-action:manipulation}
 .scr{width:100%;max-width:420px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
 .scr[hidden]{display:none}
-#menu,#upg,#admin,#gacha,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
+#menu,#upg,#admin,#gsel,#gacha,#equip,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
 #start{position:relative;background:#2a2038 url(Gtitle.png) center/cover no-repeat}
 h2,#start h1,#logo h1{background:rgba(255,255,255,.92);color:#3a2a1a;padding:6px 16px;border-radius:14px;display:inline-block}
 h2{align-self:flex-start}
@@ -58,7 +58,7 @@ input{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;widt
 #msg{position:absolute;left:0;right:0;top:40%;text-align:center;font-size:20px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000;white-space:pre-line;pointer-events:none}
 .stat{text-align:center;font-size:12px;padding:6px}.stat b{display:block;font-size:16px}
 .col{display:flex;flex-direction:column;gap:8px}.col[hidden]{display:none}
-#upg,#gacha{padding-bottom:calc(20vh + 10px)}
+#upg,#gacha,#equip{padding-bottom:calc(20vh + 10px)}
 .card{font-size:13px;border:3px solid transparent}.card.t2{border-color:#4aa8ff}.card.t3{border-color:#ffc800}.card.sel{border-color:#ff8a3d;background:#fff0d8}
 .card.off{background:rgba(20,20,25,.85);color:#777}.card b{font-size:15px}
 .tabs button{background:#9aa3b2}.tabs button.on{background:#ff8a3d}
@@ -94,7 +94,7 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
  <h2 style="margin:0">メニュー</h2>
  <div class="panel">🪙 コイン：<span id="mCoins"></span>　🏆 最高：<span id="mBest"></span>F</div>
  <button class="green" id="bToUpg">💪 強化</button>
- <button id="bToGacha" style="background:#ff9f1c">🎰 ガチャ</button>
+ <button id="bToGacha" style="background:#ff9f1c">🎰 ガチャ・装備</button>
  <div class="panel">📱 画面サイズ<div class="row" style="margin-top:6px"><button class="sz" data-z="1">100%</button><button class="sz" data-z="0.9">90%</button><button class="sz" data-z="0.8">80%</button></div></div>
  <button class="red" id="bGo">⚔️ 挑戦開始</button>
  <button style="background:#9aa3b2" id="bTitle">🏠 タイトルに戻る</button>
@@ -107,18 +107,30 @@ table.pt{width:100%;font-size:12px;border-collapse:collapse}table.pt td{padding:
  <button class="blue" id="bUpBack">メニューへ</button>
 </div>
 
+<div class="scr" id="gsel" hidden>
+ <h2 style="margin:0">ガチャ・装備</h2>
+ <button id="bSelGacha" style="background:#ff9f1c">🎰 ガチャ</button>
+ <button id="bSelEquip" class="green">🛡️ 装備</button>
+ <button class="blue" id="bSelBack">メニューへ</button>
+</div>
+
 <div class="scr" id="gacha" hidden>
  <h2 style="margin:0">🎰 ガチャ</h2>
  <div class="panel">🪙 コイン：<span id="gCoins"></span></div>
- <div class="row tabs"><button id="tPull" class="on">ガチャ選択</button><button id="tEq">装備</button></div>
  <div id="gPull" class="col">
   <div id="gList" class="col"></div>
   <div class="panel" id="gTable"></div>
   <button id="bPull" style="background:#ff9f1c"></button>
   <div class="panel res" id="gRes" hidden></div>
  </div>
- <div id="gEquip" class="col" hidden></div>
- <button class="blue" id="bGBack">メニューへ</button>
+ <button class="blue" id="bGBack">戻る</button>
+</div>
+
+<div class="scr" id="equip" hidden>
+ <h2 style="margin:0">🛡️ 装備</h2>
+ <div class="panel">🪙 コイン：<span id="eCoins"></span></div>
+ <div id="gEquip" class="col"></div>
+ <button class="blue" id="bEBack">戻る</button>
 </div>
 
 <div class="scr" id="battle" hidden>
@@ -205,16 +217,13 @@ const effTxt=(id,lv)=>{const it=ITEMS[id],x=it.v*(1+lv);return it.stat==="atk"?`
 function confetti(){for(let i=0;i<24;i++){const e=document.createElement("span");e.className="cf";e.textContent=["🎉","✨","🪙","🎊"][i%4];e.style.left=Math.random()*100+"vw";e.style.animationDelay=Math.random()*.6+"s";document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}}
 function renderGacha(){
   $("gCoins").textContent=S.coins;
-  $("tPull").classList.toggle("on",gTab==="pull");$("tEq").classList.toggle("on",gTab==="eq");
-  $("gPull").hidden=gTab!=="pull";$("gEquip").hidden=gTab!=="eq";
-  const g=GACHAS.find(x=>x.id===gSel);
+      const g=GACHAS.find(x=>x.id===gSel);
   $("gList").innerHTML=GACHAS.map(x=>`<div class="panel card ${x.id===gSel?"sel":""}" data-g="${x.id}">🎰 ${x.name}<br>1回 🪙${x.cost}</div>`).join("");
   $("gTable").innerHTML='<table class="pt"><tr><td>装備</td><td>確率</td><td>効果</td><td>強化</td></tr>'+g.pool.map(q=>q.coin?`<tr><td>🪙コイン${q.coin}枚</td><td>${q.rate}%</td><td>コイン獲得</td><td>-</td></tr>`:`<tr><td>${ITEMS[q.id].icon}${ITEMS[q.id].n}</td><td>${q.rate}%</td><td>${effTxt(q.id,0)}</td><td>+${ITEMS[q.id].v}</td></tr>`).join("")+"</table>";
   $("bPull").innerHTML=`🎰 1回まわす（🪙${g.cost}）`;$("bPull").disabled=S.coins<g.cost;
-  if(gTab==="eq")renderEquip();
 }
 function renderEquip(){
-  const GC=CFG.gacha;let h=`<div class="panel">装備中 ${S.equip.length}/${GC.slots}　<small>（同系統は1つまで／強化＝同じ物${GC.mat}個＋コイン）</small></div>`;
+  $("eCoins").textContent=S.coins;const GC=CFG.gacha;let h=`<div class="panel">装備中 ${S.equip.length}/${GC.slots}　<small>（同系統は1つまで／強化＝同じ物${GC.mat}個＋コイン）</small></div>`;
   for(const id in ITEMS){
     const it=ITEMS[id],o=S.inv[id];
     if(!o||o.n<1){h+='<div class="panel card off">？？？</div>';continue}
@@ -243,7 +252,7 @@ document.addEventListener("pointerdown",()=>{if(bgmCur&&bgmCur.paused&&soundOn)b
 function setActive(v){soundOn=v;if(!bgmCur)return;if(v)bgmCur.play().catch(()=>{});else bgmCur.pause()}
 document.addEventListener("visibilitychange",()=>setActive(!document.hidden&&document.hasFocus()));
 window.addEventListener("blur",()=>setActive(false));window.addEventListener("focus",()=>setActive(!document.hidden));
-const CANCEL=["bUpBack","bGBack","bToMenu","bTitle","bRet"];
+const CANCEL=["bUpBack","bSelBack","bEBack","bGBack","bToMenu","bTitle","bRet"];
 const KY=["uFast","uCoin","uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled||PW.indexOf(b.id)>=0)return;
   if(KY.indexOf(b.id)>=0||b.dataset.en){se("se_kyouka.mp3");return}
@@ -257,7 +266,7 @@ let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
 function swapLogo(){document.querySelectorAll("#logo .big").forEach(x=>x.remove());document.querySelectorAll("#logo h1").forEach(h=>h.innerHTML=`<img src="${imgPath("Glogo")}" style="max-width:360px;width:80%" alt="Rush up tower">`)}
 // ===== 画面 =====
-function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha"].indexOf(n)>=0?"menu1.mp3":"");ui()}
+function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip"].indexOf(n)>=0?"menu1.mp3":"");ui()}
 // ===== 部屋の積み上げ表示 =====
 const rooms={};
 const SLOT={2:[-80,80],1:[0,80],0:[80,170],"-1":[250,70],"-2":[320,70]};
@@ -387,13 +396,12 @@ $("bToUpg").onclick=()=>show("upg");$("bUpBack").onclick=()=>show("menu");$("bTi
 AREAS.forEach(a=>[a.bg,a.bossBg].forEach(n=>pl(n)));MONS.forEach(m=>pl(m.img));
 pl("Gpleyer1");pl("Gpleyer2");pl("Glogo");pl("Gtitle");pl("Ghaikei");setTimeout(boot,4000);
 // ===== ガチャ画面 =====
-$("bToGacha").onclick=()=>{gTab="pull";show("gacha")};$("bGBack").onclick=()=>show("menu");
-$("tPull").onclick=()=>{gTab="pull";renderGacha()};$("tEq").onclick=()=>{gTab="eq";renderGacha()};
+$("bToGacha").onclick=()=>show("gsel");$("bSelBack").onclick=()=>show("menu");$("bSelGacha").onclick=()=>show("gacha");$("bSelEquip").onclick=()=>show("equip");$("bGBack").onclick=()=>show("gsel");$("bEBack").onclick=()=>show("gsel");
 $("gList").onclick=e=>{const d=e.target.closest("[data-g]");if(d){gSel=d.dataset.g;renderGacha()}};
 $("bPull").onclick=pull;
 $("gEquip").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;const q=b.dataset,GC=CFG.gacha;
   if(q.eq){const i=S.equip.indexOf(q.eq);if(i>=0)S.equip.splice(i,1);else if(S.equip.length<GC.slots&&!S.equip.some(x=>ITEMS[x].stat===ITEMS[q.eq].stat))S.equip.push(q.eq)}
   else if(q.en){const o=S.inv[q.en],c=GC.enhCost(o.lv,ITEMS[q.en].tier);if(o.lv<GC.maxEnh&&o.n>GC.mat&&S.coins>=c){o.n-=GC.mat;o.lv++;S.coins-=c}}
-  save();renderGacha()};
+  save();renderEquip()};
 applySize();ui();requestAnimationFrame(loop);
 </script></body></html>
