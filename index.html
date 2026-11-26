@@ -9,7 +9,7 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;touch-action:manipulation}
 .scr{width:100%;max-width:420px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
 .scr[hidden]{display:none}
-#menu,#upg,#admin,#gsel,#gacha,#equip,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
+#menu,#upg,#admin,#gsel,#gacha,#equip,#result,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
 #start{position:relative;background:#2a2038 url(Gtitle.png) center/cover no-repeat}
 h2,#start h1,#logo h1{background:rgba(255,255,255,.92);color:#3a2a1a;padding:6px 16px;border-radius:14px;display:inline-block}
 h2{align-self:flex-start}
@@ -58,6 +58,8 @@ input{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;widt
 #msg{position:absolute;left:0;right:0;top:40%;text-align:center;font-size:20px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000;white-space:pre-line;pointer-events:none}
 .stat{text-align:center;font-size:12px;padding:6px}.stat b{display:block;font-size:16px}
 .col{display:flex;flex-direction:column;gap:8px}.col[hidden]{display:none}
+#clearOv{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:#000;z-index:50;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;text-align:center}
+#clearOv img{width:100%;height:100%;object-fit:contain}
 #upg,#gacha,#equip{padding-bottom:calc(20vh + 10px)}
 .card{font-size:13px;border:3px solid transparent}.card.t2{border-color:#4aa8ff}.card.t3{border-color:#ffc800}.card.sel{border-color:#ff8a3d;background:#fff0d8}
 .card.off{background:rgba(20,20,25,.85);color:#777}.card b{font-size:15px}
@@ -82,7 +84,7 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
 
 <div class="scr center" id="start" hidden>
  <button id="adm">🔧 管理者</button>
- <div id="sLogo"><h1 class="cool">Rush up tower</h1></div>
+ 
  <button class="blue" id="bStart">スタート</button>
  <div id="pass" class="panel" hidden style="width:100%"><div>パスワード</div><input id="pw" type="password" inputmode="numeric"><button id="pwOk" class="green" style="margin-top:8px">OK</button><div id="pwErr" style="color:#e0566b"></div></div>
 </div>
@@ -145,6 +147,14 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
  <button class="blue" id="bEBack">戻る</button>
 </div>
 
+<div class="scr center" id="result" hidden>
+ <div class="panel" style="width:100%;text-align:center;font-size:16px;line-height:1.9">
+  <div id="rTitle" style="font-size:26px;font-weight:900"></div>
+  <div id="rBody"></div>
+ </div>
+ <button class="blue" id="bRMenu">メニューへ</button>
+</div>
+
 <div class="scr" id="battle" hidden>
  <div class="top" style="align-items:center"><span id="floor"></span><span id="area"></span><span>🪙 <span id="coins"></span></span><button id="bFast" hidden style="width:auto;min-height:32px;padding:4px 10px;font-size:12px;background:#2f9bd6"></button></div>
  <div id="scene">
@@ -174,7 +184,8 @@ const CFG={
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:2,atk:1.25,coin:5},
   coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
-  fastUp:{floors:[10,20,30,40,50],cost:[3000,6000,9000,12000,15000]},   // 各階に到達すると購入可。購入後、その階の手前まで2倍速にできるボタンが使える
+  losePenalty:0.1,   // 敗北時、その挑戦で獲得したコインから引く割合
+  fastUp:{floors:[10,20,30,40,50,60,70,80],cost:[3000,6000,9000,12000,15000,18000,21000,24000]},   // 各階に到達すると購入可。購入後、その階の手前まで2倍速にできるボタンが使える
   gacha:{slots:3,maxEnh:10,mat:5,enhCost:(lv,tier)=>[50,150,300][tier-1]*(lv+1),regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
 };
 // ===== エリア定義（追加はここに足すだけ） =====
@@ -183,11 +194,47 @@ const AREAS=[
  {name:"第2エリア",bg:"Gbg3",bossBg:"Gbg4",sky:"linear-gradient(#4f9d6a,#b6e3a0)",ground:"repeating-linear-gradient(90deg,#4f9a4a 0 30px,#448a40 30px 60px)"},
  {name:"第3エリア",bg:"Gbg5",bossBg:"Gbg6",sky:"linear-gradient(#3b3b6e,#8f7bc9)",ground:"repeating-linear-gradient(90deg,#6a5a9a 0 30px,#5c4d8a 30px 60px)"},
  {name:"第4エリア",bg:"Gbg7",bossBg:"Gbg8",sky:"linear-gradient(#3a2a3a,#8a5a6a)",ground:"repeating-linear-gradient(90deg,#6a4a52 0 30px,#5a3d45 30px 60px)"},
- {name:"第5エリア",bg:"Gbg9",bossBg:"Gbg10",sky:"linear-gradient(#222,#7a2a2a)",ground:"repeating-linear-gradient(90deg,#555 0 30px,#444 30px 60px)"}
+ {name:"第5エリア",bg:"Gbg9",bossBg:"Gbg10",sky:"linear-gradient(#222,#7a2a2a)",ground:"repeating-linear-gradient(90deg,#555 0 30px,#444 30px 60px)"},
+ {name:"第6エリア",bg:"Gbg11",bossBg:"Gbg12",sky:"linear-gradient(#5a1a0a,#ff8a3d)",ground:"repeating-linear-gradient(90deg,#8a3a1a 0 30px,#74301a 30px 60px)"},
+ {name:"第7エリア",bg:"Gbg13",bossBg:"Gbg14",sky:"linear-gradient(#0a3a6a,#6ad0ff)",ground:"repeating-linear-gradient(90deg,#2a6a9a 0 30px,#225a88 30px 60px)"},
+ {name:"第8エリア",bg:"Gbg15",bossBg:"Gbg16",sky:"linear-gradient(#3a3000,#ffe14a)",ground:"repeating-linear-gradient(90deg,#8a7a1a 0 30px,#766812 30px 60px)"}
 ];
 // ===== モンスター（N階=N番目。画像は Gmon<N>.png。能力補正は MON_MOD[階]={hp,atk,coin} で個別指定可） =====
 const MONS="ホーンラビット,キラービー,スライム,マンイーター,ゾンビ,ゾンビ犬,呪い猫,ゴブリン,リザードマン,トロール,マンドラゴラ,腐敗樹,苔人間,デスプラント,食人木,腐敗妖精,呪われた樹精,メタルマンティス,トレント,ウィッププラント,呪肉,エクトプラズム,幽魚,半漁人,カースアイ,彷徨う魂,貴腐人,血の使用人,死術師,呪われた伯爵,インプ,メタルシザー,メタルストーカー,メタルゴブリン,スケルトンアーチャー,ポイズングール,古きもの,ダークエルフ,墓堀ゾンビ,ダークフェアリー,デスナイト,ウルフマン,邪悪な意思,ブルーオーガ,闇の呼び声,終焉の書,リビングアーマー,ハンズビースト,キマイラ,鉄球兵".split(",").map((n,i)=>({n,img:"Gmon"+(i+1)}));
 const MON_MOD={};
+// ===== 51〜80階：既存画像にfilterをかけて再利用（[名前,属性,元画像番号 または 専用画像名]。属性は ELEM_FILTERS のキー、""ならフィルター無し） =====
+[
+ ["炎のスライム","fire",3],
+ ["炎のマンイーター","fire",4],
+ ["炎のゴブリン","fire",8],
+ ["炎のスケルトンアーチャー","fire",35],
+ ["炎の半魚人","fire",24],
+ ["炎のメタルストーカー","fire",33],
+ ["炎のデスナイト","fire",41],
+ ["炎のトレント","fire",19],
+ ["炎のキマイラ","fire",49],
+ ["炎の魔神","","Gmasin1"],
+ ["水のスライム","water",3],
+ ["水のマンイーター","water",4],
+ ["水のゴブリン","water",8],
+ ["水のスケルトンアーチャー","water",35],
+ ["水の半魚人","water",24],
+ ["水のメタルストーカー","water",33],
+ ["水のデスナイト","water",41],
+ ["水のトレント","water",19],
+ ["水のキマイラ","water",49],
+ ["水の魔神","","Gmasin2"],
+ ["雷のスライム","thunder",3],
+ ["雷のマンイーター","thunder",4],
+ ["雷のゴブリン","thunder",8],
+ ["雷のスケルトンアーチャー","thunder",35],
+ ["雷の半魚人","thunder",24],
+ ["雷のメタルストーカー","thunder",33],
+ ["雷のデスナイト","thunder",41],
+ ["雷のトレント","thunder",19],
+ ["雷のキマイラ","thunder",49],
+ ["雷の魔神","","Gmasin3"]
+].forEach(a=>MONS.push({n:a[0],el:a[1]||undefined,img:typeof a[2]==="number"?"Gmon"+a[2]:a[2]}));
 // ===== 装備・ガチャ（v=基礎効果=強化ごとの加算値。tier:1通常/2改/3真） =====
 const ITEMS={
  ring1:{n:"力の指輪",icon:"💍",stat:"atk",v:4,tier:1},ring2:{n:"力の指輪・改",icon:"💍",stat:"atk",v:8,tier:2},ring3:{n:"力の指輪・真",icon:"💍",stat:"atk",v:16,tier:3},
@@ -221,7 +268,7 @@ function mkEnemy(f){
   const boss=f%CFG.floorsPerArea===0,k=f-1,m=MONS[k],o=MON_MOD[f]||{};
   const hm=(o.hp||1)*(boss?CFG.boss.hp:1),am=(o.atk||1)*(boss?CFG.boss.atk:1),cm=(o.coin||1)*(boss?CFG.boss.coin:1);
   const hp=Math.ceil(CFG.base.hp*Math.pow(CFG.scale.hp,k)*hm);
-  return{n:m.n,e:boss?"👹":"👾",img:m.img,hp,max:hp,atk:Math.max(1,Math.round(CFG.base.atk*Math.pow(CFG.scale.atk,k)*am)),coin:Math.ceil(CFG.base.coin*Math.pow(CFG.scale.coin,Math.min(k,9))*Math.pow(CFG.scale.coin2,Math.max(0,k-9))*cm),boss};
+  return{n:m.n,e:boss?"👹":"👾",img:m.img,el:m.el,hp,max:hp,atk:Math.max(1,Math.round(CFG.base.atk*Math.pow(CFG.scale.atk,k)*am)),coin:Math.ceil(CFG.base.coin*Math.pow(CFG.scale.coin,Math.min(k,9))*Math.pow(CFG.scale.coin2,Math.max(0,k-9))*cm),boss};
 }
 const pre=f=>G.pre[f]||(G.pre[f]=mkEnemy(f));
 let gSel="adv",gTab="pull";
@@ -273,12 +320,14 @@ let pending=0,booted=false;
 function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
 function fin(){if(--pending<=0)boot()}
 function boot(){if(booted)return;booted=true;{const seen={};S.equip=S.equip.filter(id=>{const t=ITEMS[id]&&ITEMS[id].stat;if(!t||seen[t])return false;seen[t]=1;return true})}setW("battle");if(IMG.Glogo)swapLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
-const face=en=>IMG[en.img]?`<img src="${imgPath(en.img)}" alt="">`:en.e;
+const GLOW="drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px rgba(255,255,255,.9))";
+const elF=en=>{const e=en.el&&ELEM_FILTERS.find(x=>x.k===en.el);return e?e.f:""};
+const face=(en,g)=>IMG[en.img]?`<img src="${imgPath(en.img)}" alt="" style="filter:${(elF(en)+" "+(g?GLOW:"")).trim()||"none"}">`:en.e;
 let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
 function swapLogo(){document.querySelectorAll("#logo .big").forEach(x=>x.remove());document.querySelectorAll("#logo h1").forEach(h=>h.innerHTML=`<img src="${imgPath("Glogo")}" style="max-width:360px;width:80%" alt="Rush up tower">`)}
 // ===== 画面 =====
-function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();if(n==="admin")renderAm();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip"].indexOf(n)>=0?"menu1.mp3":"");ui()}
+function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();if(n==="admin")renderAm();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip","result"].indexOf(n)>=0?"menu1.mp3":"");ui()}
 // ===== 部屋の積み上げ表示 =====
 const rooms={};
 const SLOT={2:[-80,80],1:[0,80],0:[80,170],"-1":[250,70],"-2":[320,70]};
@@ -335,15 +384,33 @@ function lunge(el,dir){el.style.setProperty("--d",dir*22+"px");el.classList.add(
 function flash(el){el.classList.add("hit");setTimeout(()=>el.classList.remove("hit"),100)}
 // ===== 戦闘 =====
 function spawn(){
-  G.en=Object.assign({},pre(G.floor));S.reach=Math.max(S.reach||0,G.floor);if(G.fast&&G.floor>=G.fastTo)G.fast=false;const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en);e.style.fontSize=G.en.boss?"84px":"58px";
+  G.en=Object.assign({},pre(G.floor));S.reach=Math.max(S.reach||0,G.floor);if(G.fast&&G.floor>=G.fastTo)G.fast=false;const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en,true);e.style.fontSize=G.en.boss?"84px":"58px";
   G.phase="approach";G.t=0;G.wx=-15;G.ex=88;G.wCd=0.3;G.eCd=0.8;say(G.en.boss?"BOSS！":"");$("w").className="ch";place();layout();ui();
 }
 function start(){
   G.floor=1;G.pre={};G.hp=maxHp();G.run=0;G.cd=0;G.bcd=0;G.buff=0;G.dbcd=0;G.dbuff=0;G.rt=CFG.gacha.regenSec;G.fast=false;G.en=null;$("e").textContent="";$("w").className="ch";show("battle");spawn();
 }
-function end(msg){
-  G.phase="over";G.buff=0;G.dbuff=0;G.fast=false;$("w").classList.remove("run");save();say(msg+"\n獲得コイン 🪙"+G.run);ui();
-  setTimeout(()=>{G.phase="idle";G.en=null;G.floor=1;say("");show("menu")},1800);
+function clearTower(){
+  G.phase="over";G.buff=0;G.dbuff=0;G.fast=false;$("w").classList.remove("run");save();ui();
+  const o=document.createElement("div");o.id="clearOv";
+  o.innerHTML=IMG.Gclear?`<img src="${imgPath("Gclear")}" alt="">`:`<div>🎉 塔を制覇した！ 🎉<br><small>獲得コイン 🪙${G.run}</small><br><small>タップでメニューへ</small></div>`;
+  o.onclick=()=>{o.remove();say("");showResult("clear")};
+  document.body.appendChild(o);
+}
+function showResult(kind){
+  const pen=kind==="lose"?Math.floor(G.run*CFG.losePenalty):0;
+  S.coins=Math.max(0,S.coins-pen);save();
+  $("rTitle").textContent={lose:"💀 敗北…",retreat:"🏳️ 撤退",clear:"🎉 塔を制覇！"}[kind];
+  $("rBody").innerHTML=`<div>到達階：<b>${G.floor}F</b>　（最高 ${S.best}F）</div><div>獲得コイン：🪙${G.run}</div>`
+    +(kind==="lose"?`<div style="color:#c0392b">敗北ペナルティ（-${Math.round(CFG.losePenalty*100)}%）：-🪙${pen}</div>`:"")
+    +`<div style="margin-top:6px;font-size:19px;font-weight:900">最終獲得コイン：🪙${G.run-pen}</div>`;
+  G.phase="idle";G.en=null;
+  show("result");
+}
+function end(kind){
+  G.phase="over";G.buff=0;G.dbuff=0;G.fast=false;$("w").classList.remove("run");save();
+  say(kind==="lose"?"やられた…":"にげた！");ui();
+  setTimeout(()=>{say("");showResult(kind)},kind==="lose"?1100:400);
 }
 function doHeal(){
   if(G.cd>0||G.phase==="idle"||G.phase==="over")return;
@@ -371,9 +438,9 @@ function step(dt){
     if(G.en.hp<=0){
       G.en.hp=0;const gc=G.en.coin+coinBonus(S.cnLv);S.coins+=gc;G.run+=gc;S.best=Math.max(S.best,G.floor);
       $("e").classList.add("die");se("se_monster_kill.mp3");float(G.ex,"+"+gc+"🪙","#ffd84a");save();
-      if(G.floor>=TOTAL){end("塔を制覇した！🎉");return}
+      if(G.floor>=TOTAL){clearTower();return}
       G.phase="clear";G.t=0;
-    }else if(G.hp<=0){G.hp=0;$("w").classList.add("die");se("se_monster_kill.mp3");end("やられた…");return}
+    }else if(G.hp<=0){G.hp=0;$("w").classList.add("die");se("se_monster_kill.mp3");end("lose");return}
   }else if(G.phase==="clear"){
     G.t+=dt;
     if(G.t>=0.5){G.phase="out";G.t=0;$("w").classList.add("run")}
@@ -395,6 +462,7 @@ $("adm").onclick=()=>{$("pass").hidden=!$("pass").hidden;$("pw").value="";$("pwE
 $("pwOk").onclick=()=>{if($("pw").value==="198505"){$("pass").hidden=true;show("admin")}else $("pwErr").textContent="パスワードがちがいます"};
 $("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};
 $("bToMenu").onclick=()=>show("menu");
+$("bRMenu").onclick=()=>{G.floor=1;G.en=null;show("menu")};
 // ===== 管理者：モンスター属性カラー確認（プレビュー画像だけにfilterを適用。画像ファイル・戦闘画面は変更しない） =====
 // sepiaで元の色味を揃えてから hue-rotate で目的の色へ寄せ、saturate/brightness/contrast で調整
 const ELEM_FILTERS=[
@@ -418,11 +486,11 @@ function renderAm(){
 $("amSel").innerHTML=MONS.map((m,i)=>`<option value="${i}">${i+1}. ${m.n}</option>`).join("");
 $("amEl").innerHTML=ELEM_FILTERS.map(e=>`<button class="el" data-k="${e.k}">${e.n}</button>`).join("");
 $("amImg").onerror=()=>{$("amImg").style.visibility="hidden";$("amMiss").textContent="画像が見つかりません："+$("amImg").getAttribute("src");$("amMiss").hidden=false};
-$("amSel").onchange=()=>{amIdx=+$("amSel").value;renderAm()};
-$("amPrev").onclick=()=>{amIdx=(amIdx+MONS.length-1)%MONS.length;renderAm()};
-$("amNext").onclick=()=>{amIdx=(amIdx+1)%MONS.length;renderAm()};
+$("amSel").onchange=()=>{amIdx=+$("amSel").value;amKey=MONS[amIdx].el||"normal";renderAm()};
+$("amPrev").onclick=()=>{amIdx=(amIdx+MONS.length-1)%MONS.length;amKey=MONS[amIdx].el||"normal";renderAm()};
+$("amNext").onclick=()=>{amIdx=(amIdx+1)%MONS.length;amKey=MONS[amIdx].el||"normal";renderAm()};
 $("amEl").onclick=e=>{const b=e.target.closest("button");if(b){amKey=b.dataset.k;renderAm()}};
-$("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("にげた！")};
+$("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("retreat")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
 const buy=(id,key,base)=>$(id).onclick=()=>{const c=cost(S[key]-base);if(S.coins>=c){S.coins-=c;S[key]++;save();ui()}};
 buy("uAtk","atkLv",0);buy("uHp","hpLv",0);buy("uSpd","spdLv",0);buy("uHeal","healLv",0);
@@ -433,7 +501,7 @@ function applySize(){const z=+S.size||1;document.body.style.zoom=z;document.quer
 document.querySelectorAll(".sz").forEach(b=>b.onclick=()=>{S.size=+b.dataset.z;save();applySize()});
 $("bToUpg").onclick=()=>show("upg");$("bUpBack").onclick=()=>show("menu");$("bTitle").onclick=()=>show("start");
 AREAS.forEach(a=>[a.bg,a.bossBg].forEach(n=>pl(n)));MONS.forEach(m=>pl(m.img));
-pl("Gpleyer1");pl("Gpleyer2");pl("Glogo");pl("Gtitle");pl("Ghaikei");setTimeout(boot,4000);
+pl("Gpleyer1");pl("Gpleyer2");pl("Glogo");pl("Gtitle");pl("Ghaikei");pl("Gclear");setTimeout(boot,4000);
 // ===== ガチャ画面 =====
 $("bToGacha").onclick=()=>show("gsel");$("bSelBack").onclick=()=>show("menu");$("bSelGacha").onclick=()=>show("gacha");$("bSelEquip").onclick=()=>show("equip");$("bGBack").onclick=()=>show("gsel");$("bEBack").onclick=()=>show("gsel");
 $("gList").onclick=e=>{const d=e.target.closest("[data-g]");if(d){gSel=d.dataset.g;renderGacha()}};
