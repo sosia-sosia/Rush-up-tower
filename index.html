@@ -9,7 +9,7 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;touch-action:manipulation}
 .scr{width:100%;max-width:420px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
 .scr[hidden]{display:none}
-#menu,#upg,#admin,#gsel,#gacha,#equip,#result,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
+#menu,#upg,#admin,#gsel,#gacha,#esel,#equip,#result,#battle{background:#2a2038 url(Ghaikei.png) center/cover no-repeat}
 #start{position:relative;background:#2a2038 url(Gtitle.png) center/cover no-repeat}
 h2,#start h1,#logo h1{background:rgba(255,255,255,.92);color:#3a2a1a;padding:6px 16px;border-radius:14px;display:inline-block}
 h2{align-self:flex-start}
@@ -95,6 +95,7 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
  <button id="bAdd">🪙 コインを100追加</button>
  <button id="bAdd1k">🪙 コインを1000追加</button>
  <button id="bAdd10k">🪙 コインを10000追加</button>
+ <button id="bAdd100k">🪙 コインを100000追加</button>
  <div class="panel"><div>🎨 モンスター属性カラー確認</div>
   <div class="row" style="margin-top:6px"><button id="amPrev" class="el" style="flex:0 0 52px">◀</button><select id="amSel"></select><button id="amNext" class="el" style="flex:0 0 52px">▶</button></div>
   <div id="amBox"><img id="amImg" alt=""><div id="amMiss" hidden></div></div>
@@ -135,13 +136,20 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
   <div id="gList" class="col"></div>
   <div class="panel" id="gTable"></div>
   <button id="bPull" style="background:#ff9f1c"></button>
+  <button id="bPull10" style="background:#e8590c"></button>
   <div class="panel res" id="gRes" hidden></div>
  </div>
  <button class="blue" id="bGBack">戻る</button>
 </div>
 
+<div class="scr" id="esel" hidden>
+ <h2 style="margin:0">装備選択</h2>
+ <div id="eList" class="col"></div>
+ <button class="blue" id="bESBack">戻る</button>
+</div>
+
 <div class="scr" id="equip" hidden>
- <h2 style="margin:0">🛡️ 装備</h2>
+ <h2 style="margin:0" id="eTitle">🛡️ 装備</h2>
  <div class="panel">🪙 コイン：<span id="eCoins"></span></div>
  <div id="gEquip" class="col"></div>
  <button class="blue" id="bEBack">戻る</button>
@@ -178,7 +186,7 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
 // ===== バランス設定 =====
 const CFG={
   floorsPerArea:10,
-  player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,healPerLv:3,healCd:8,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:5}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
+  player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,spdMax:100,healPerLv:3,healCd:8,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:5}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
   cost:{base:10,growth:1.10},
   scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2},
   base:{hp:18,atk:3,coin:3,aspd:0.8},
@@ -186,7 +194,7 @@ const CFG={
   coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
   losePenalty:0.1,   // 敗北時、その挑戦で獲得したコインから引く割合
   fastUp:{floors:[10,20,30,40,50,60,70,80],cost:[3000,6000,9000,12000,15000,18000,21000,24000]},   // 各階に到達すると購入可。購入後、その階の手前まで2倍速にできるボタンが使える
-  gacha:{slots:3,maxEnh:10,mat:5,enhCost:(lv,tier)=>[50,150,300][tier-1]*(lv+1),regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
+  gacha:{maxEnh:10,mat:5,regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
 };
 // ===== エリア定義（追加はここに足すだけ） =====
 const AREAS=[
@@ -237,18 +245,31 @@ const MON_MOD={};
 ].forEach(a=>MONS.push({n:a[0],el:a[1]||undefined,img:typeof a[2]==="number"?"Gmon"+a[2]:a[2]}));
 // ===== 装備・ガチャ（v=基礎効果=強化ごとの加算値。tier:1通常/2改/3真） =====
 const ITEMS={
- ring1:{n:"力の指輪",icon:"💍",stat:"atk",v:4,tier:1},ring2:{n:"力の指輪・改",icon:"💍",stat:"atk",v:8,tier:2},ring3:{n:"力の指輪・真",icon:"💍",stat:"atk",v:16,tier:3},
- arm1:{n:"守りの腕輪",icon:"📿",stat:"def",v:2,tier:1},arm2:{n:"守りの腕輪・改",icon:"📿",stat:"def",v:4,tier:2},arm3:{n:"守りの腕輪・真",icon:"📿",stat:"def",v:8,tier:3},
- bro1:{n:"回復のブローチ",icon:"🏵️",stat:"heal",v:5,tier:1},bro2:{n:"回復のブローチ・改",icon:"🏵️",stat:"heal",v:10,tier:2},bro3:{n:"回復のブローチ・真",icon:"🏵️",stat:"heal",v:20,tier:3}
+ ring1:{n:"力の指輪",icon:"💍",stat:"atk",v:4,tier:1,g:"adv",eb:50},ring2:{n:"力の指輪・改",icon:"💍",stat:"atk",v:8,tier:2,g:"adv",eb:150},ring3:{n:"力の指輪・真",icon:"💍",stat:"atk",v:16,tier:3,g:"adv",eb:300},
+ arm1:{n:"守りの腕輪",icon:"📿",stat:"def",v:2,tier:1,g:"adv",eb:50},arm2:{n:"守りの腕輪・改",icon:"📿",stat:"def",v:4,tier:2,g:"adv",eb:150},arm3:{n:"守りの腕輪・真",icon:"📿",stat:"def",v:8,tier:3,g:"adv",eb:300},
+ bro1:{n:"回復のブローチ",icon:"🏵️",stat:"heal",v:5,tier:1,g:"adv",eb:50},bro2:{n:"回復のブローチ・改",icon:"🏵️",stat:"heal",v:10,tier:2,g:"adv",eb:150},bro3:{n:"回復のブローチ・真",icon:"🏵️",stat:"heal",v:20,tier:3,g:"adv",eb:300},
+ // 上級者ガチャ：pct=割合(%)装備。v=Lv1の値(強化ごとにv加算、Lv10で10v)。eb=強化コインの基準額(×現在のLv)
+ gau1:{n:"怪力の籠手",icon:"🥊",stat:"atk",pct:1,v:1,tier:1,g:"pro",eb:1000},gau2:{n:"怪力の籠手・改",icon:"🥊",stat:"atk",pct:1,v:2,tier:2,g:"pro",eb:2000},gau3:{n:"怪力の籠手・真",icon:"🥊",stat:"atk",pct:1,v:3,tier:3,g:"pro",eb:3000},
+ mail1:{n:"鉄壁の鎧",icon:"🦺",stat:"def",pct:1,v:1,tier:1,g:"pro",eb:1000},mail2:{n:"鉄壁の鎧・改",icon:"🦺",stat:"def",pct:1,v:2,tier:2,g:"pro",eb:2000},mail3:{n:"鉄壁の鎧・真",icon:"🦺",stat:"def",pct:1,v:3,tier:3,g:"pro",eb:3000},
+ belt1:{n:"再生のベルト",icon:"🎗️",stat:"heal",pct:1,v:1,tier:1,g:"pro",eb:1000},belt2:{n:"再生のベルト・改",icon:"🎗️",stat:"heal",pct:1,v:2,tier:2,g:"pro",eb:2000},belt3:{n:"再生のベルト・真",icon:"🎗️",stat:"heal",pct:1,v:3,tier:3,g:"pro",eb:3000}
 };
 function fastTarget(){const m=CFG.fastUp.floors[(S.fastLv||0)-1];return m>G.floor?m:undefined}
 function coinBonus(l){return l>0?CFG.coinUp.add[l-1]:0}
-const GACHAS=[{id:"adv",name:"冒険者ガチャ",cost:100,pool:[
- {id:"ring1",rate:20},{id:"arm1",rate:20},{id:"bro1",rate:20},
- {id:"ring2",rate:10},{id:"arm2",rate:10},{id:"bro2",rate:10},
- {id:"ring3",rate:3},{id:"arm3",rate:3},{id:"bro3",rate:3},
- {coin:1000,rate:1}]}];
-function eqv(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&it.stat===st?it.v*(1+o.lv):0)},0)}
+// guarantee=10連の最後の1枠で確定するレア度(tier2=「・改」以上。コインも対象)
+const GACHAS=[
+ {id:"adv",name:"冒険者ガチャ",cost:100,guarantee:2,pool:[
+  {id:"ring1",rate:20},{id:"arm1",rate:20},{id:"bro1",rate:20},
+  {id:"ring2",rate:10},{id:"arm2",rate:10},{id:"bro2",rate:10},
+  {id:"ring3",rate:3},{id:"arm3",rate:3},{id:"bro3",rate:3},
+  {coin:1000,rate:1}]},
+ {id:"pro",name:"上級者ガチャ",cost:1000,guarantee:2,pool:[
+  {id:"gau1",rate:20},{id:"mail1",rate:20},{id:"belt1",rate:20},
+  {id:"gau2",rate:10},{id:"mail2",rate:10},{id:"belt2",rate:10},
+  {id:"gau3",rate:3},{id:"mail3",rate:3},{id:"belt3",rate:3},
+  {coin:10000,rate:1}]}
+];
+function eqv(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&!it.pct&&it.stat===st?it.v*(1+o.lv):0)},0)}
+function eqp(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&it.pct&&it.stat===st?effVal(id,o.lv):0)},0)}
 const $=id=>document.getElementById(id),KEY="towerGameSave1",TOTAL=AREAS.length*CFG.floorsPerArea;
 let S={coins:0,atkLv:0,hpLv:0,spdLv:0,healLv:0,defLv:0,buffLv:0,dbLv:0,size:1,best:0,inv:{},equip:[],cnLv:0,reach:0,fastLv:0};
 try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d)S=Object.assign(S,d)}catch(e){}
@@ -257,10 +278,10 @@ document.addEventListener("contextmenu",e=>e.preventDefault());
 document.addEventListener("selectstart",e=>e.preventDefault());
 document.addEventListener("dragstart",e=>e.preventDefault());
 const maxHp=()=>CFG.player.hp+CFG.player.hpPerLv*S.hpLv;
-const atk=()=>CFG.player.atk+CFG.player.atkPerLv*S.atkLv+(G.buff>0?CFG.player.buffPerLv*S.buffLv:0)+eqv("atk");
-const def=()=>CFG.player.defPerLv*S.defLv+(G.dbuff>0?CFG.player.dbPerLv*S.dbLv:0)+eqv("def");
+const atk=()=>Math.round((CFG.player.atk+CFG.player.atkPerLv*S.atkLv+(G.buff>0?CFG.player.buffPerLv*S.buffLv:0)+eqv("atk"))*(1+eqp("atk")/100));
+const def=()=>Math.round((CFG.player.defPerLv*S.defLv+(G.dbuff>0?CFG.player.dbPerLv*S.dbLv:0)+eqv("def"))*(1+eqp("def")/100));
 const aspd=()=>CFG.player.aspd+CFG.player.spdPerLv*S.spdLv;
-const heal=()=>CFG.player.healPerLv*S.healLv;
+const heal=()=>Math.round(CFG.player.healPerLv*S.healLv*(1+eqp("heal")/100));
 const cost=lv=>Math.ceil(CFG.cost.base*Math.pow(CFG.cost.growth,lv));
 const areaOf=f=>AREAS[Math.min(AREAS.length-1,Math.floor((f-1)/CFG.floorsPerArea))];
 let G={phase:"idle",floor:1,hp:0,en:null,t:0,wCd:0,eCd:0,run:0,cd:0,bcd:0,buff:0,dbcd:0,dbuff:0,rt:10,fast:false,fastTo:0,pre:{},wx:22,ex:80};
@@ -271,32 +292,53 @@ function mkEnemy(f){
   return{n:m.n,e:boss?"👹":"👾",img:m.img,el:m.el,hp,max:hp,atk:Math.max(1,Math.round(CFG.base.atk*Math.pow(CFG.scale.atk,k)*am)),coin:Math.ceil(CFG.base.coin*Math.pow(CFG.scale.coin,Math.min(k,9))*Math.pow(CFG.scale.coin2,Math.max(0,k-9))*cm),boss};
 }
 const pre=f=>G.pre[f]||(G.pre[f]=mkEnemy(f));
-let gSel="adv",gTab="pull";
-const effTxt=(id,lv)=>{const it=ITEMS[id],x=it.v*(1+lv);return it.stat==="atk"?`攻撃力+${x}`:it.stat==="def"?`防御力+${x}`:`${CFG.gacha.regenSec}秒ごとに${x}回復`};
+let gSel="adv",gTab="pull",eSel="adv";
+const fmt=x=>Number(x.toFixed(1));
+const effVal=(id,lv)=>ITEMS[id].v*(1+lv);
+const mxE=id=>ITEMS[id].pct?9:CFG.gacha.maxEnh;   // 割合装備はLv10(強化9回)まで
+const bn=id=>ITEMS[id].n.split("・")[0];   // 無印の名前（同名系統の判定用）
+const stepTxt=id=>ITEMS[id].v+(ITEMS[id].pct?"%":"");
+const effTxt=(id,lv)=>{const it=ITEMS[id],x=fmt(effVal(id,lv)),u=it.pct?"%":"";return it.stat==="atk"?`攻撃力+${x}${u}`:it.stat==="def"?`防御力+${x}${u}`:it.pct?`回復スキルの回復力+${x}%`:`${CFG.gacha.regenSec}秒ごとに${x}回復`};
 function confetti(){for(let i=0;i<24;i++){const e=document.createElement("span");e.className="cf";e.textContent=["🎉","✨","🪙","🎊"][i%4];e.style.left=Math.random()*100+"vw";e.style.animationDelay=Math.random()*.6+"s";document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}}
 function renderGacha(){
   $("gCoins").textContent=S.coins;
       const g=GACHAS.find(x=>x.id===gSel);
-  $("gList").innerHTML=GACHAS.map(x=>`<div class="panel card ${x.id===gSel?"sel":""}" data-g="${x.id}">🎰 ${x.name}<br>1回 🪙${x.cost}</div>`).join("");
-  $("gTable").innerHTML='<table class="pt"><tr><td>装備</td><td>確率</td><td>効果</td><td>強化</td></tr>'+g.pool.map(q=>q.coin?`<tr><td>🪙コイン${q.coin}枚</td><td>${q.rate}%</td><td>コイン獲得</td><td>-</td></tr>`:`<tr><td>${ITEMS[q.id].icon}${ITEMS[q.id].n}</td><td>${q.rate}%</td><td>${effTxt(q.id,0)}</td><td>+${ITEMS[q.id].v}</td></tr>`).join("")+"</table>";
+  $("gList").innerHTML=GACHAS.map(x=>`<div class="panel card ${x.id===gSel?"sel":""}" data-g="${x.id}">🎰 ${x.name}<br>1回 🪙${x.cost}　${(()=>{const ids=Object.keys(ITEMS).filter(i=>ITEMS[i].g===x.id);return "所持 "+ids.filter(i=>S.inv[i]&&S.inv[i].n>0).length+"/"+ids.length+"種"})()}</div>`).join("");
+  $("gTable").innerHTML='<table class="pt"><tr><td>装備</td><td>確率</td><td>効果</td><td>強化</td><td>所持</td></tr>'+g.pool.map(q=>q.coin?`<tr><td>🪙コイン${q.coin}枚</td><td>${q.rate}%</td><td>コイン獲得</td><td>-</td><td>-</td></tr>`:`<tr><td>${ITEMS[q.id].icon}${ITEMS[q.id].n}</td><td>${q.rate}%</td><td>${effTxt(q.id,0)}</td><td>+${stepTxt(q.id)}</td><td><b>${(S.inv[q.id]||{n:0}).n}</b></td></tr>`).join("")+"</table>";
   $("bPull").innerHTML=`🎰 1回まわす（🪙${g.cost}）`;$("bPull").disabled=S.coins<g.cost;
+  const b10=$("bPull10");b10.innerHTML=`🎰 10連（🪙${g.cost*10}）<small>最後の1枠は「・改」以上確定</small>`;b10.disabled=S.coins<g.cost*10;
 }
 function renderEquip(){
-  $("eCoins").textContent=S.coins;const GC=CFG.gacha;let h=`<div class="panel">装備中 ${S.equip.length}/${GC.slots}　<small>（同系統は1つまで／強化＝同じ物${GC.mat}個＋コイン）</small></div>`;
-  for(const id in ITEMS){
+  $("eCoins").textContent=S.coins;$("eTitle").textContent="🛡️ "+GACHAS.find(x=>x.id===eSel).name+"の装備";const GC=CFG.gacha;let h=`<div class="panel">装備中 ${S.equip.length}個${S.equip.length?"："+S.equip.map(i=>ITEMS[i].n).join("、"):""}<br><small>（同名系統（無印が同じ装備）は1つまで／強化＝同じ物${GC.mat}個＋コイン）</small></div>`;
+  for(const id in ITEMS){if(ITEMS[id].g!==eSel)continue;
     const it=ITEMS[id],o=S.inv[id];
     if(!o||o.n<1){h+='<div class="panel card off">？？？</div>';continue}
-    const eq=S.equip.includes(id),c=GC.enhCost(o.lv,it.tier),max=o.lv>=GC.maxEnh,can=!max&&o.n>GC.mat&&S.coins>=c,dup=!eq&&S.equip.some(x=>ITEMS[x].stat===it.stat),full=!eq&&(S.equip.length>=GC.slots||dup);
-    h+=`<div class="panel card t${it.tier} ${eq?"sel":""}"><div>${it.icon} <b>${it.n}${o.lv?" +"+o.lv:""}</b>　所持×${o.n}</div><div>${effTxt(id,o.lv)}${max?"（MAX）":"（強化で+"+it.v+"）"}</div><div class="row" style="margin-top:6px"><button data-eq="${id}" style="min-height:40px;background:${eq?"#e0566b":"#3cc46a"}" ${full?"disabled":""}>${eq?"はずす":dup?"同系統を装備中":"装備する"}</button><button data-en="${id}" style="min-height:40px;background:#b36bff" ${can?"":"disabled"}>${max?"MAX":"強化 🪙"+c}</button></div></div>`;
+    const eq=S.equip.includes(id),c=it.eb*(o.lv+1),max=o.lv>=mxE(id),can=!max&&o.n>GC.mat&&S.coins>=c,dup=!eq&&S.equip.some(x=>bn(x)===bn(id)),full=!eq&&dup;
+    h+=`<div class="panel card t${it.tier} ${eq?"sel":""}"><div>${it.icon} <b>${it.n}${it.pct?" Lv"+(o.lv+1):o.lv?" +"+o.lv:""}</b>　所持×${o.n}</div><div>${effTxt(id,o.lv)}${max?"（MAX）":"（強化で+"+stepTxt(id)+"）"}</div><div class="row" style="margin-top:6px"><button data-eq="${id}" style="min-height:40px;background:${eq?"#e0566b":"#3cc46a"}" ${full?"disabled":""}>${eq?"はずす":dup?"同名系統を装備中":"装備する"}</button><button data-en="${id}" style="min-height:40px;background:#b36bff" ${can?"":"disabled"}>${max?"MAX":"強化 🪙"+c}</button></div></div>`;
   }
   $("gEquip").innerHTML=h;
 }
-function pull(){
-  const g=GACHAS.find(x=>x.id===gSel);if(S.coins<g.cost)return;S.coins-=g.cost;
-  let r=Math.random()*100,p=g.pool[g.pool.length-1];for(const q of g.pool){if(r<q.rate){p=q;break}r-=q.rate}
-  const b=$("gRes");b.hidden=false;b.className="panel res";
-  if(p.coin){S.coins+=p.coin;b.classList.add("win");b.innerHTML=`<div class="ic">🎉</div>おめでとう！<br>🪙コイン${p.coin}枚 獲得！`;confetti()}
-  else{const it=ITEMS[p.id],o=S.inv[p.id]||(S.inv[p.id]={n:0,lv:0});o.n++;b.innerHTML=`<div class="ic">${it.icon}</div>${it.n}<br><small>${o.n===1?"NEW！":"所持 ×"+o.n}</small>`;if(it.tier===3){b.classList.add("win");confetti()}}
+function renderESel(){
+  $("eList").innerHTML=GACHAS.map(g=>{const ids=Object.keys(ITEMS).filter(i=>ITEMS[i].g===g.id),own=ids.filter(i=>S.inv[i]&&S.inv[i].n>0).length;return `<button data-eg="${g.id}" style="background:#3cc46a">🛡️ ${g.name}の装備<small>所持 ${own}/${ids.length}種</small></button>`}).join("");
+}
+function rollOne(g,rare){
+  const pool=rare?g.pool.filter(q=>q.coin||ITEMS[q.id].tier>=g.guarantee):g.pool;
+  let r=Math.random()*pool.reduce((a,q)=>a+q.rate,0),p=pool[pool.length-1];
+  for(const q of pool){if(r<q.rate){p=q;break}r-=q.rate}
+  return p;
+}
+function pull(n){
+  const g=GACHAS.find(x=>x.id===gSel),tot=g.cost*n;if(S.coins<tot)return;S.coins-=tot;
+  const L=[];let big=false;
+  for(let i=0;i<n;i++){
+    const p=rollOne(g,n>1&&i===n-1);
+    if(p.coin){S.coins+=p.coin;big=true;L.push({coin:p.coin})}
+    else{const it=ITEMS[p.id],o=S.inv[p.id]||(S.inv[p.id]={n:0,lv:0});o.n++;if(it.tier===3)big=true;L.push({ic:it.icon,t:it.n,nw:o.n===1,n:o.n,tier:it.tier})}
+  }
+  const b=$("gRes");b.hidden=false;b.className="panel res"+(big?" win":"");
+  if(n===1){const x=L[0];b.innerHTML=x.coin?`<div class="ic">🎉</div>おめでとう！<br>🪙コイン${x.coin}枚 獲得！`:`<div class="ic">${x.ic}</div>${x.t}<br><small>${x.nw?"NEW！":"所持 ×"+x.n}</small>`}
+  else b.innerHTML='<div style="font-size:14px;text-align:left">'+L.map(x=>x.coin?`<div style="padding:2px 6px;border-radius:6px;background:#ffd24a">🎉 コイン${x.coin}枚 獲得！</div>`:`<div style="padding:2px 6px;border-radius:6px;${x.tier===3?"background:#ffd24a":x.tier===2?"background:#cfe6ff":""}">${x.ic} ${x.t} <small>${x.nw?"NEW！":"所持×"+x.n}</small></div>`).join("")+"</div>";
+  if(big)confetti();
   save();renderGacha();
 }
 // ===== 画像（images/フォルダ。無ければ絵文字・グラデーションで表示） =====
@@ -311,7 +353,7 @@ document.addEventListener("pointerdown",()=>{if(bgmCur&&bgmCur.paused&&soundOn)b
 function setActive(v){soundOn=v;if(!bgmCur)return;if(v)bgmCur.play().catch(()=>{});else bgmCur.pause()}
 document.addEventListener("visibilitychange",()=>setActive(!document.hidden&&document.hasFocus()));
 window.addEventListener("blur",()=>setActive(false));window.addEventListener("focus",()=>setActive(!document.hidden));
-const CANCEL=["bUpBack","bSelBack","bEBack","bGBack","bToMenu","bTitle","bRet"];
+const CANCEL=["bUpBack","bESBack","bSelBack","bEBack","bGBack","bToMenu","bTitle","bRet"];
 const KY=["uFast","uCoin","uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled||PW.indexOf(b.id)>=0)return;
   if(KY.indexOf(b.id)>=0||b.dataset.en){se("se_kyouka.mp3");return}
@@ -319,7 +361,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||
 let pending=0,booted=false;
 function pl(n){pending++;const i=new Image();i.onload=()=>{IMG[n]=1;if(booted){if(n==="Glogo")swapLogo();if(n.indexOf("Gpleyer")===0)setW(wMode||"battle")}fin()};i.onerror=fin;i.src=imgPath(n)}
 function fin(){if(--pending<=0)boot()}
-function boot(){if(booted)return;booted=true;{const seen={};S.equip=S.equip.filter(id=>{const t=ITEMS[id]&&ITEMS[id].stat;if(!t||seen[t])return false;seen[t]=1;return true})}setW("battle");if(IMG.Glogo)swapLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
+function boot(){if(booted)return;booted=true;{const seen={};S.equip=S.equip.filter(id=>{const t=ITEMS[id]&&bn(id);if(!t||seen[t])return false;seen[t]=1;return true})}setW("battle");if(IMG.Glogo)swapLogo();show("logo");setTimeout(()=>{if(!$("logo").hidden)show("start")},2500)}
 const GLOW="drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px rgba(255,255,255,.9))";
 const elF=en=>{const e=en.el&&ELEM_FILTERS.find(x=>x.k===en.el);return e?e.f:""};
 const face=(en,g)=>IMG[en.img]?`<img src="${imgPath(en.img)}" alt="" style="filter:${(elF(en)+" "+(g?GLOW:"")).trim()||"none"}">`:en.e;
@@ -327,7 +369,7 @@ let wMode="";
 function setW(m){wMode=m;const k=m==="run"?"Gpleyer2":"Gpleyer1";$("w").innerHTML=IMG[k]?`<img src="${imgPath(k)}" alt="">`:"🤺"}
 function swapLogo(){document.querySelectorAll("#logo .big").forEach(x=>x.remove());document.querySelectorAll("#logo h1").forEach(h=>h.innerHTML=`<img src="${imgPath("Glogo")}" style="max-width:360px;width:80%" alt="Rush up tower">`)}
 // ===== 画面 =====
-function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();if(n==="admin")renderAm();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","equip","result"].indexOf(n)>=0?"menu1.mp3":"");ui()}
+function show(n){document.querySelectorAll(".scr").forEach(s=>s.hidden=s.id!==n);if(n==="battle")layout();if(n==="gacha")renderGacha();if(n==="equip")renderEquip();if(n==="admin")renderAm();if(n==="esel")renderESel();setBgm(n==="battle"?"stage1.mp3":["menu","upg","admin","gacha","gsel","esel","equip","result"].indexOf(n)>=0?"menu1.mp3":"");ui()}
 // ===== 部屋の積み上げ表示 =====
 const rooms={};
 const SLOT={2:[-80,80],1:[0,80],0:[80,170],"-1":[250,70],"-2":[320,70]};
@@ -357,6 +399,7 @@ function ui(){
   up("uAtk","⚔️ 攻撃力",S.atkLv,`${atk()} → ${atk()+CFG.player.atkPerLv}`);
   up("uHp","❤️ 最大HP",S.hpLv,`${maxHp()} → ${maxHp()+CFG.player.hpPerLv}`);
   up("uSpd","⚡ 攻撃スピード",S.spdLv,`${aspd().toFixed(1)}回/秒 → ${(aspd()+CFG.player.spdPerLv).toFixed(1)}回/秒`);
+  if(S.spdLv>=CFG.player.spdMax){$("uSpd").innerHTML=`⚡ 攻撃スピード Lv${S.spdLv}<small>MAX（${aspd().toFixed(1)}回/秒）</small>`;$("uSpd").disabled=true}
   const c=cost(S.healLv);$("uHeal").innerHTML=`💚（手動）回復 Lv${S.healLv}<small>${heal()} → ${heal()+CFG.player.healPerLv} ／ 🪙${c}</small>`;$("uHeal").disabled=S.coins<c;
   up("uDef","🛡️ 防御力",S.defLv,`${def()} → ${def()+CFG.player.defPerLv}`);
   const c2=cost(S.buffLv);$("uBuff").innerHTML=`🔥（手動）攻撃アップ Lv${S.buffLv}<small>+${CFG.player.buffPerLv*S.buffLv} → +${CFG.player.buffPerLv*(S.buffLv+1)} (${CFG.player.buffDur}秒) ／ 🪙${c2}</small>`;$("uBuff").disabled=S.coins<c2;
@@ -460,7 +503,7 @@ $("logo").onclick=()=>show("start");
 $("bStart").onclick=()=>show("menu");
 $("adm").onclick=()=>{$("pass").hidden=!$("pass").hidden;$("pw").value="";$("pwErr").textContent=""};
 $("pwOk").onclick=()=>{if($("pw").value==="198505"){$("pass").hidden=true;show("admin")}else $("pwErr").textContent="パスワードがちがいます"};
-$("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};
+$("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};$("bAdd100k").onclick=()=>{S.coins+=100000;save();ui()};
 $("bToMenu").onclick=()=>show("menu");
 $("bRMenu").onclick=()=>{G.floor=1;G.en=null;show("menu")};
 // ===== 管理者：モンスター属性カラー確認（プレビュー画像だけにfilterを適用。画像ファイル・戦闘画面は変更しない） =====
@@ -493,7 +536,7 @@ $("amEl").onclick=e=>{const b=e.target.closest("button");if(b){amKey=b.dataset.k
 $("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("retreat")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
 const buy=(id,key,base)=>$(id).onclick=()=>{const c=cost(S[key]-base);if(S.coins>=c){S.coins-=c;S[key]++;save();ui()}};
-buy("uAtk","atkLv",0);buy("uHp","hpLv",0);buy("uSpd","spdLv",0);buy("uHeal","healLv",0);
+buy("uAtk","atkLv",0);buy("uHp","hpLv",0);$("uSpd").onclick=()=>{const c=cost(S.spdLv);if(S.spdLv<CFG.player.spdMax&&S.coins>=c){S.coins-=c;S.spdLv++;save();ui()}};buy("uHeal","healLv",0);
 $("uCoin").onclick=()=>{const U=CFG.coinUp,l=S.cnLv,c=U.cost(l),rc=Math.max(S.reach||0,S.best);if(l<U.floors.length&&rc>=U.floors[l]&&S.coins>=c){S.coins-=c;S.cnLv++;save();ui()}};buy("uDef","defLv",0);buy("uBuff","buffLv",0);buy("uDb","dbLv",0);
 $("uFast").onclick=()=>{const F=CFG.fastUp,l=S.fastLv||0,rc=Math.max(S.reach||0,S.best);if(l<F.floors.length&&rc>=F.floors[l]&&S.coins>=F.cost[l]){S.coins-=F.cost[l];S.fastLv=l+1;save();ui()}};
 $("bFast").onclick=()=>{if(G.fast)G.fast=false;else{const t=fastTarget();if(t){G.fast=true;G.fastTo=t}}ui()};
@@ -503,12 +546,12 @@ $("bToUpg").onclick=()=>show("upg");$("bUpBack").onclick=()=>show("menu");$("bTi
 AREAS.forEach(a=>[a.bg,a.bossBg].forEach(n=>pl(n)));MONS.forEach(m=>pl(m.img));
 pl("Gpleyer1");pl("Gpleyer2");pl("Glogo");pl("Gtitle");pl("Ghaikei");pl("Gclear");setTimeout(boot,4000);
 // ===== ガチャ画面 =====
-$("bToGacha").onclick=()=>show("gsel");$("bSelBack").onclick=()=>show("menu");$("bSelGacha").onclick=()=>show("gacha");$("bSelEquip").onclick=()=>show("equip");$("bGBack").onclick=()=>show("gsel");$("bEBack").onclick=()=>show("gsel");
+$("bToGacha").onclick=()=>show("gsel");$("bSelBack").onclick=()=>show("menu");$("bSelGacha").onclick=()=>show("gacha");$("bSelEquip").onclick=()=>show("esel");$("bGBack").onclick=()=>show("gsel");$("bEBack").onclick=()=>show("esel");$("bESBack").onclick=()=>show("gsel");$("eList").onclick=e=>{const b=e.target.closest("button");if(b&&b.dataset.eg){eSel=b.dataset.eg;show("equip")}};
 $("gList").onclick=e=>{const d=e.target.closest("[data-g]");if(d){gSel=d.dataset.g;renderGacha()}};
-$("bPull").onclick=pull;
+$("bPull").onclick=()=>pull(1);$("bPull10").onclick=()=>pull(10);
 $("gEquip").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;const q=b.dataset,GC=CFG.gacha;
-  if(q.eq){const i=S.equip.indexOf(q.eq);if(i>=0)S.equip.splice(i,1);else if(S.equip.length<GC.slots&&!S.equip.some(x=>ITEMS[x].stat===ITEMS[q.eq].stat))S.equip.push(q.eq)}
-  else if(q.en){const o=S.inv[q.en],c=GC.enhCost(o.lv,ITEMS[q.en].tier);if(o.lv<GC.maxEnh&&o.n>GC.mat&&S.coins>=c){o.n-=GC.mat;o.lv++;S.coins-=c}}
+  if(q.eq){const i=S.equip.indexOf(q.eq);if(i>=0)S.equip.splice(i,1);else if(!S.equip.some(x=>bn(x)===bn(q.eq)))S.equip.push(q.eq)}
+  else if(q.en){const o=S.inv[q.en],c=ITEMS[q.en].eb*(o.lv+1);if(o.lv<mxE(q.en)&&o.n>GC.mat&&S.coins>=c){o.n-=GC.mat;o.lv++;S.coins-=c}}
   save();renderEquip()};
 applySize();ui();requestAnimationFrame(loop);
 </script></body></html>
