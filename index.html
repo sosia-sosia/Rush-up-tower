@@ -58,6 +58,8 @@ input{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3b2;widt
 #msg{position:absolute;left:0;right:0;top:40%;text-align:center;font-size:20px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000;white-space:pre-line;pointer-events:none}
 .stat{text-align:center;font-size:12px;padding:6px}.stat b{display:block;font-size:16px}
 .col{display:flex;flex-direction:column;gap:8px}.col[hidden]{display:none}
+#startPick{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(0,0,0,.6);z-index:40;display:flex;align-items:center;justify-content:center;text-align:center}
+#startPick[hidden]{display:none}
 #clearOv{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:#000;z-index:50;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;text-align:center}
 #clearOv img{width:100%;height:100%;object-fit:contain}
 #upg,#gacha,#equip{padding-bottom:calc(20vh + 10px)}
@@ -118,7 +120,7 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
 <div class="scr" id="upg" hidden>
  <h2 style="margin:0">強化</h2>
  <div class="panel">🪙 コイン：<span id="uCoins"></span></div>
- <button id="uAtk"></button><button id="uHp" class="green"></button><button id="uSpd" class="blue"></button><button id="uDef" style="background:#7a8cff"></button><button id="uBuff" style="background:#ff5a8a"></button><button id="uDb" style="background:#4a7cff"></button><button id="uHeal" style="background:#b36bff"></button><button id="uCoin" style="background:#e6a100"></button><button id="uFast" style="background:#2f9bd6"></button>
+ <button id="uAtk"></button><button id="uHp" class="green"></button><button id="uSpd" class="blue"></button><button id="uDef" style="background:#7a8cff"></button><button id="uBuff" style="background:#ff5a8a"></button><button id="uDb" style="background:#4a7cff"></button><button id="uHeal" style="background:#b36bff"></button><button id="uCoin" style="background:#e6a100"></button><button id="uFast" style="background:#2f9bd6"></button><button id="uSkip" style="background:#7b5cff"></button>
  <button class="blue" id="bUpBack">メニューへ</button>
 </div>
 
@@ -182,17 +184,19 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
  </div>
 </div>
 
+<div id="startPick" hidden><div class="panel" style="width:88%"><div style="font-size:18px;font-weight:900;margin-bottom:8px">⏭️ 開始階を選んでください</div><div id="spBtns" class="col"></div><button class="red" id="spCancel" style="margin-top:8px">やめる</button></div></div>
 <script>
 // ===== バランス設定 =====
 const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,spdMax:100,healPerLv:3,healCd:8,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:5}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
   cost:{base:10,growth:1.10},
-  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2},
+  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2,hp2:1.01,atk2:1.01},   // hp2/atk2=51階以降のHP・攻撃力の成長率,
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:2,atk:1.25,coin:5},
   coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
   losePenalty:0.1,   // 敗北時、その挑戦で獲得したコインから引く割合
+  skipUp:{starts:[11,21,31],cost:[100000,300000,600000]},   // 手前の階(10/20/30)をクリア済みで、順番にだけ購入可。購入後は開始階を選べる
   fastUp:{floors:[10,20,30,40,50,60,70,80],cost:[3000,6000,9000,12000,15000,18000,21000,24000]},   // 各階に到達すると購入可。購入後、その階の手前まで2倍速にできるボタンが使える
   gacha:{maxEnh:10,mat:5,regenSec:10}   // 強化: 同じ装備を mat 個使用+コイン / 回復装備は regenSec 秒ごとに自動回復
 };
@@ -271,7 +275,7 @@ const GACHAS=[
 function eqv(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&!it.pct&&it.stat===st?it.v*(1+o.lv):0)},0)}
 function eqp(st){return S.equip.reduce((a,id)=>{const it=ITEMS[id],o=S.inv[id];return a+(it&&o&&it.pct&&it.stat===st?effVal(id,o.lv):0)},0)}
 const $=id=>document.getElementById(id),KEY="towerGameSave1",TOTAL=AREAS.length*CFG.floorsPerArea;
-let S={coins:0,atkLv:0,hpLv:0,spdLv:0,healLv:0,defLv:0,buffLv:0,dbLv:0,size:1,best:0,inv:{},equip:[],cnLv:0,reach:0,fastLv:0};
+let S={coins:0,atkLv:0,hpLv:0,spdLv:0,healLv:0,defLv:0,buffLv:0,dbLv:0,size:1,best:0,inv:{},equip:[],cnLv:0,reach:0,fastLv:0,skipLv:0,startFloor:1};
 try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d)S=Object.assign(S,d)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 document.addEventListener("contextmenu",e=>e.preventDefault());
@@ -288,8 +292,8 @@ let G={phase:"idle",floor:1,hp:0,en:null,t:0,wCd:0,eCd:0,run:0,cd:0,bcd:0,buff:0
 function mkEnemy(f){
   const boss=f%CFG.floorsPerArea===0,k=f-1,m=MONS[k],o=MON_MOD[f]||{};
   const hm=(o.hp||1)*(boss?CFG.boss.hp:1),am=(o.atk||1)*(boss?CFG.boss.atk:1),cm=(o.coin||1)*(boss?CFG.boss.coin:1);
-  const hp=Math.ceil(CFG.base.hp*Math.pow(CFG.scale.hp,k)*hm);
-  return{n:m.n,e:boss?"👹":"👾",img:m.img,el:m.el,hp,max:hp,atk:Math.max(1,Math.round(CFG.base.atk*Math.pow(CFG.scale.atk,k)*am)),coin:Math.ceil(CFG.base.coin*Math.pow(CFG.scale.coin,Math.min(k,9))*Math.pow(CFG.scale.coin2,Math.max(0,k-9))*cm),boss};
+  const hp=Math.ceil(CFG.base.hp*Math.pow(CFG.scale.hp,Math.min(k,49))*Math.pow(CFG.scale.hp2,Math.max(0,k-49))*hm);
+  return{n:m.n,e:boss?"👹":"👾",img:m.img,el:m.el,hp,max:hp,atk:Math.max(1,Math.round(CFG.base.atk*Math.pow(CFG.scale.atk,Math.min(k,49))*Math.pow(CFG.scale.atk2,Math.max(0,k-49))*am)),coin:Math.ceil(CFG.base.coin*Math.pow(CFG.scale.coin,Math.min(k,9))*Math.pow(CFG.scale.coin2,Math.max(0,k-9))*cm),boss};
 }
 const pre=f=>G.pre[f]||(G.pre[f]=mkEnemy(f));
 let gSel="adv",gTab="pull",eSel="adv";
@@ -353,8 +357,8 @@ document.addEventListener("pointerdown",()=>{if(bgmCur&&bgmCur.paused&&soundOn)b
 function setActive(v){soundOn=v;if(!bgmCur)return;if(v)bgmCur.play().catch(()=>{});else bgmCur.pause()}
 document.addEventListener("visibilitychange",()=>setActive(!document.hidden&&document.hasFocus()));
 window.addEventListener("blur",()=>setActive(false));window.addEventListener("focus",()=>setActive(!document.hidden));
-const CANCEL=["bUpBack","bESBack","bSelBack","bEBack","bGBack","bToMenu","bTitle","bRet"];
-const KY=["uFast","uCoin","uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
+const CANCEL=["spCancel","bUpBack","bESBack","bSelBack","bEBack","bGBack","bToMenu","bTitle","bRet"];
+const KY=["uSkip","uFast","uCoin","uAtk","uHp","uSpd","uHeal","uDef","uBuff","uDb"],PW=["bHeal","bBuff","bDb"];
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled||PW.indexOf(b.id)>=0)return;
   if(KY.indexOf(b.id)>=0||b.dataset.en){se("se_kyouka.mp3");return}
   se(CANCEL.indexOf(b.id)>=0?"se_cancel.mp3":"se_confirm.mp3")});
@@ -410,6 +414,9 @@ function ui(){
   {const F=CFG.fastUp,l=S.fastLv||0,mx=l>=F.floors.length,need=F.floors[l],c=F.cost[l],rc=Math.max(S.reach||0,S.best);
    $("uFast").innerHTML=mx?`⏩ 2倍速ボタン Lv${l}<small>MAX（〜${F.floors[l-1]}階まで）</small>`:rc<need?`🔒 2倍速ボタン Lv${l}<small>${need}階に到達で解放</small>`:`⏩ 2倍速ボタン Lv${l}<small>${need}階まで2倍速 ／ 🪙${c}</small>`;
    $("uFast").disabled=mx||rc<need||S.coins<c}
+  {const K=CFG.skipUp,l=S.skipLv||0,mx=l>=K.starts.length,st=K.starts[l],c=K.cost[l];
+   $("uSkip").innerHTML=mx?`⏭️ スキップ開始 Lv${l}<small>MAX（${K.starts[l-1]}階から開始可）</small>`:S.best<st-1?`🔒 スキップ開始 Lv${l}<small>${st-1}階クリアで解放</small>`:`⏭️ スキップ開始 Lv${l}<small>${st}階から開始 ／ 🪙${c}</small>`;
+   $("uSkip").disabled=mx||S.best<st-1||S.coins<c}
   $("floor").textContent=G.floor+"F"+(G.en&&G.en.boss?" 👑":"");$("area").textContent=areaOf(G.floor).name;
   $("sHp").textContent=`${Math.max(0,Math.ceil(G.hp))}/${maxHp()}`;$("sAtk").textContent=atk();$("sDef").textContent=def();$("sRun").textContent=G.run;$("sBest").textContent=S.best;
   $("hpw").firstChild.style.width=Math.max(0,G.hp/maxHp()*100)+"%";$("lw").textContent=`HP ${Math.max(0,Math.ceil(G.hp))}`;
@@ -430,8 +437,8 @@ function spawn(){
   G.en=Object.assign({},pre(G.floor));S.reach=Math.max(S.reach||0,G.floor);if(G.fast&&G.floor>=G.fastTo)G.fast=false;const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en,true);e.style.fontSize=G.en.boss?"84px":"58px";
   G.phase="approach";G.t=0;G.wx=-15;G.ex=88;G.wCd=0.3;G.eCd=0.8;say(G.en.boss?"BOSS！":"");$("w").className="ch";place();layout();ui();
 }
-function start(){
-  G.floor=1;G.pre={};G.hp=maxHp();G.run=0;G.cd=0;G.bcd=0;G.buff=0;G.dbcd=0;G.dbuff=0;G.rt=CFG.gacha.regenSec;G.fast=false;G.en=null;$("e").textContent="";$("w").className="ch";show("battle");spawn();
+function start(f){
+  G.floor=f||1;G.pre={};G.hp=maxHp();G.run=0;G.cd=0;G.bcd=0;G.buff=0;G.dbcd=0;G.dbuff=0;G.rt=CFG.gacha.regenSec;G.fast=false;G.en=null;$("e").textContent="";$("w").className="ch";show("battle");spawn();
 }
 function clearTower(){
   G.phase="over";G.buff=0;G.dbuff=0;G.fast=false;$("w").classList.remove("run");save();ui();
@@ -533,12 +540,20 @@ $("amSel").onchange=()=>{amIdx=+$("amSel").value;amKey=MONS[amIdx].el||"normal";
 $("amPrev").onclick=()=>{amIdx=(amIdx+MONS.length-1)%MONS.length;amKey=MONS[amIdx].el||"normal";renderAm()};
 $("amNext").onclick=()=>{amIdx=(amIdx+1)%MONS.length;amKey=MONS[amIdx].el||"normal";renderAm()};
 $("amEl").onclick=e=>{const b=e.target.closest("button");if(b){amKey=b.dataset.k;renderAm()}};
-$("bGo").onclick=start;$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("retreat")};
+$("bGo").onclick=()=>{
+  const st=[1].concat(CFG.skipUp.starts.slice(0,S.skipLv||0));
+  if(st.length<2){start(1);return}
+  $("spBtns").innerHTML=st.map(f=>`<button data-sf="${f}" style="background:#ff8a3d">${f}階から</button>`).join("");
+  $("startPick").hidden=false;
+};
+$("spBtns").onclick=e=>{const b=e.target.closest("button");if(b&&b.dataset.sf){$("startPick").hidden=true;start(+b.dataset.sf)}};
+$("spCancel").onclick=()=>{$("startPick").hidden=true};$("bRet").onclick=()=>{if(G.phase!=="idle"&&G.phase!=="over")end("retreat")};
 $("bHeal").onclick=doHeal;$("bBuff").onclick=doBuff;$("bDb").onclick=doDb;
 const buy=(id,key,base)=>$(id).onclick=()=>{const c=cost(S[key]-base);if(S.coins>=c){S.coins-=c;S[key]++;save();ui()}};
 buy("uAtk","atkLv",0);buy("uHp","hpLv",0);$("uSpd").onclick=()=>{const c=cost(S.spdLv);if(S.spdLv<CFG.player.spdMax&&S.coins>=c){S.coins-=c;S.spdLv++;save();ui()}};buy("uHeal","healLv",0);
 $("uCoin").onclick=()=>{const U=CFG.coinUp,l=S.cnLv,c=U.cost(l),rc=Math.max(S.reach||0,S.best);if(l<U.floors.length&&rc>=U.floors[l]&&S.coins>=c){S.coins-=c;S.cnLv++;save();ui()}};buy("uDef","defLv",0);buy("uBuff","buffLv",0);buy("uDb","dbLv",0);
 $("uFast").onclick=()=>{const F=CFG.fastUp,l=S.fastLv||0,rc=Math.max(S.reach||0,S.best);if(l<F.floors.length&&rc>=F.floors[l]&&S.coins>=F.cost[l]){S.coins-=F.cost[l];S.fastLv=l+1;save();ui()}};
+$("uSkip").onclick=()=>{const K=CFG.skipUp,l=S.skipLv||0;if(l<K.starts.length&&S.best>=K.starts[l]-1&&S.coins>=K.cost[l]){S.coins-=K.cost[l];S.skipLv=l+1;save();ui()}};
 $("bFast").onclick=()=>{if(G.fast)G.fast=false;else{const t=fastTarget();if(t){G.fast=true;G.fastTo=t}}ui()};
 function applySize(){const z=+S.size||1;document.body.style.zoom=z;document.querySelectorAll(".sz").forEach(b=>b.classList.toggle("on",+b.dataset.z===z))}
 document.querySelectorAll(".sz").forEach(b=>b.onclick=()=>{S.size=+b.dataset.z;save();applySize()});
