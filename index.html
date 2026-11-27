@@ -249,9 +249,9 @@ const ITEMS={
  arm1:{n:"守りの腕輪",icon:"📿",stat:"def",v:2,tier:1,g:"adv",eb:50},arm2:{n:"守りの腕輪・改",icon:"📿",stat:"def",v:4,tier:2,g:"adv",eb:150},arm3:{n:"守りの腕輪・真",icon:"📿",stat:"def",v:8,tier:3,g:"adv",eb:300},
  bro1:{n:"回復のブローチ",icon:"🏵️",stat:"heal",v:5,tier:1,g:"adv",eb:50},bro2:{n:"回復のブローチ・改",icon:"🏵️",stat:"heal",v:10,tier:2,g:"adv",eb:150},bro3:{n:"回復のブローチ・真",icon:"🏵️",stat:"heal",v:20,tier:3,g:"adv",eb:300},
  // 上級者ガチャ：pct=割合(%)装備。v=Lv1の値(強化ごとにv加算、Lv10で10v)。eb=強化コインの基準額(×現在のLv)
- gau1:{n:"怪力の籠手",icon:"🥊",stat:"atk",pct:1,v:1,tier:1,g:"pro",eb:1000},gau2:{n:"怪力の籠手・改",icon:"🥊",stat:"atk",pct:1,v:2,tier:2,g:"pro",eb:2000},gau3:{n:"怪力の籠手・真",icon:"🥊",stat:"atk",pct:1,v:3,tier:3,g:"pro",eb:3000},
- mail1:{n:"鉄壁の鎧",icon:"🦺",stat:"def",pct:1,v:1,tier:1,g:"pro",eb:1000},mail2:{n:"鉄壁の鎧・改",icon:"🦺",stat:"def",pct:1,v:2,tier:2,g:"pro",eb:2000},mail3:{n:"鉄壁の鎧・真",icon:"🦺",stat:"def",pct:1,v:3,tier:3,g:"pro",eb:3000},
- belt1:{n:"再生のベルト",icon:"🎗️",stat:"heal",pct:1,v:1,tier:1,g:"pro",eb:1000},belt2:{n:"再生のベルト・改",icon:"🎗️",stat:"heal",pct:1,v:2,tier:2,g:"pro",eb:2000},belt3:{n:"再生のベルト・真",icon:"🎗️",stat:"heal",pct:1,v:3,tier:3,g:"pro",eb:3000}
+ gau1:{n:"怪力の籠手",icon:"🥊",stat:"atk",pct:1,v:1,tier:1,g:"pro",eb:500},gau2:{n:"怪力の籠手・改",icon:"🥊",stat:"atk",pct:1,v:3,tier:2,g:"pro",eb:2000},gau3:{n:"怪力の籠手・真",icon:"🥊",stat:"atk",pct:1,v:5,tier:3,g:"pro",eb:5000},
+ mail1:{n:"鉄壁の鎧",icon:"🦺",stat:"def",pct:1,v:1,tier:1,g:"pro",eb:500},mail2:{n:"鉄壁の鎧・改",icon:"🦺",stat:"def",pct:1,v:3,tier:2,g:"pro",eb:2000},mail3:{n:"鉄壁の鎧・真",icon:"🦺",stat:"def",pct:1,v:5,tier:3,g:"pro",eb:5000},
+ belt1:{n:"再生のベルト",icon:"🎗️",stat:"heal",pct:1,v:1,tier:1,g:"pro",eb:500},belt2:{n:"再生のベルト・改",icon:"🎗️",stat:"heal",pct:1,v:3,tier:2,g:"pro",eb:2000},belt3:{n:"再生のベルト・真",icon:"🎗️",stat:"heal",pct:1,v:5,tier:3,g:"pro",eb:5000}
 };
 function fastTarget(){const m=CFG.fastUp.floors[(S.fastLv||0)-1];return m>G.floor?m:undefined}
 function coinBonus(l){return l>0?CFG.coinUp.add[l-1]:0}
