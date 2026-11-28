@@ -192,10 +192,11 @@ const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,spdMax:100,healPerLv:3,healCd:8,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:5}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
   cost:{base:10,growth:1.10},
-  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2,hp2:1.02,atk2:1.02},   // hp2/atk2=51階以降のHP・攻撃力の成長率,
+  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2,hp2:1.03,atk2:1.03},   // hp2/atk2=51階以降のHP・攻撃力の成長率,
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:2,atk:1.25,coin:5},
   coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
+  clearDelay:2000,   // 80階クリア後、クリア画面を出すまでの時間(ms)
   losePenalty:0.1,   // 敗北時、その挑戦で獲得したコインから引く割合
   skipUp:{starts:[11,21,31],cost:[100000,300000,600000]},   // 手前の階(10/20/30)をクリア済みで、順番にだけ購入可。購入後は開始階を選べる
   fastUp:{floors:[10,20,30,40,50,60,70,80],cost:[3000,6000,9000,12000,15000,18000,21000,24000]},   // 各階に到達すると購入可。購入後、その階の手前まで2倍速にできるボタンが使える
@@ -446,7 +447,7 @@ function clearTower(){
   const o=document.createElement("div");o.id="clearOv";
   o.innerHTML=IMG.Gclear?`<img src="${imgPath("Gclear")}" alt="">`:`<div>🎉 塔を制覇した！ 🎉<br><small>獲得コイン 🪙${G.run}</small><br><small>タップでメニューへ</small></div>`;
   o.onclick=()=>{o.remove();say("");showResult("clear")};
-  document.body.appendChild(o);
+  setTimeout(()=>document.body.appendChild(o),CFG.clearDelay);
 }
 function showResult(kind){
   const pen=kind==="lose"?Math.floor(G.run*CFG.losePenalty):0;
