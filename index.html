@@ -98,6 +98,7 @@ select#amSel{font:inherit;padding:10px;border-radius:10px;border:2px solid #9aa3
  <button id="bAdd1k">🪙 コインを1000追加</button>
  <button id="bAdd10k">🪙 コインを10000追加</button>
  <button id="bAdd100k">🪙 コインを100000追加</button>
+ <div id="admStart" class="col"></div>
  <div class="panel"><div>🎨 モンスター属性カラー確認</div>
   <div class="row" style="margin-top:6px"><button id="amPrev" class="el" style="flex:0 0 52px">◀</button><select id="amSel"></select><button id="amNext" class="el" style="flex:0 0 52px">▶</button></div>
   <div id="amBox"><img id="amImg" alt=""><div id="amMiss" hidden></div></div>
@@ -191,7 +192,7 @@ const CFG={
   floorsPerArea:10,
   player:{atk:2,atkPerLv:2,hp:30,hpPerLv:12,aspd:2.0,spdPerLv:0.2,spdMax:100,healPerLv:3,healCd:8,defPerLv:1,buffPerLv:1,buffCd:10,buffDur:5,dbPerLv:1,dbCd:10,dbDur:5}, // 速度=aspd+spdPerLv×Lv / 防UP=+dbPerLv×Lv(dbDur秒,クールdbCd秒) / 回復量=healPerLv×Lv / 防御=defPerLv×Lv / 攻UP=+buffPerLv×Lv(buffDur秒,クールbuffCd秒)
   cost:{base:10,growth:1.10},
-  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2,hp2:1.01,atk2:1.01},   // hp2/atk2=51階以降のHP・攻撃力の成長率,
+  scale:{hp:1.13,atk:1.09,coin:1.14,coin2:1.2,hp2:1.02,atk2:1.02},   // hp2/atk2=51階以降のHP・攻撃力の成長率,
   base:{hp:18,atk:3,coin:3,aspd:0.8},
   boss:{hp:2,atk:1.25,coin:5},
   coinUp:{floors:[10,20,30,40],add:[10,30,60,100],cost:lv=>100*(lv+1)},   // 各階層に到達するごとに1回だけ強化可。強化後の合計加算量(add配列) 敵1体あたり
@@ -434,11 +435,11 @@ function lunge(el,dir){el.style.setProperty("--d",dir*22+"px");el.classList.add(
 function flash(el){el.classList.add("hit");setTimeout(()=>el.classList.remove("hit"),100)}
 // ===== 戦闘 =====
 function spawn(){
-  G.en=Object.assign({},pre(G.floor));S.reach=Math.max(S.reach||0,G.floor);if(G.fast&&G.floor>=G.fastTo)G.fast=false;const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en,true);e.style.fontSize=G.en.boss?"84px":"58px";
+  G.en=Object.assign({},pre(G.floor));if(!G.admin)S.reach=Math.max(S.reach||0,G.floor);if(G.fast&&G.floor>=G.fastTo)G.fast=false;const e=$("e");e.className="ch"+(G.en.boss?" boss":"");e.innerHTML=face(G.en,true);e.style.fontSize=G.en.boss?"84px":"58px";
   G.phase="approach";G.t=0;G.wx=-15;G.ex=88;G.wCd=0.3;G.eCd=0.8;say(G.en.boss?"BOSS！":"");$("w").className="ch";place();layout();ui();
 }
-function start(f){
-  G.floor=f||1;G.pre={};G.hp=maxHp();G.run=0;G.cd=0;G.bcd=0;G.buff=0;G.dbcd=0;G.dbuff=0;G.rt=CFG.gacha.regenSec;G.fast=false;G.en=null;$("e").textContent="";$("w").className="ch";show("battle");spawn();
+function start(f,adm){
+  G.floor=f||1;G.admin=!!adm;G.pre={};G.hp=maxHp();G.run=0;G.cd=0;G.bcd=0;G.buff=0;G.dbcd=0;G.dbuff=0;G.rt=CFG.gacha.regenSec;G.fast=false;G.en=null;$("e").textContent="";$("w").className="ch";show("battle");spawn();
 }
 function clearTower(){
   G.phase="over";G.buff=0;G.dbuff=0;G.fast=false;$("w").classList.remove("run");save();ui();
@@ -486,7 +487,7 @@ function step(dt){
     if(G.wCd<=0){G.wCd+=1/aspd();const d=atk();G.en.hp-=d;lunge($("w"),1);flash($("e"));float(G.ex,d,"#ffe14a");se("se_damage.mp3")}
     if(G.en.hp>0&&G.eCd<=0){G.eCd+=1/CFG.base.aspd;const dm=Math.max(1,G.en.atk-def());G.hp-=dm;lunge($("e"),-1);flash($("w"));float(G.wx,dm,"#ff8a8a");se("se_damage.mp3")}
     if(G.en.hp<=0){
-      G.en.hp=0;const gc=G.en.coin+coinBonus(S.cnLv);S.coins+=gc;G.run+=gc;S.best=Math.max(S.best,G.floor);
+      G.en.hp=0;const gc=G.en.coin+coinBonus(S.cnLv);S.coins+=gc;G.run+=gc;if(!G.admin)S.best=Math.max(S.best,G.floor);
       $("e").classList.add("die");se("se_monster_kill.mp3");float(G.ex,"+"+gc+"🪙","#ffd84a");save();
       if(G.floor>=TOTAL){clearTower();return}
       G.phase="clear";G.t=0;
@@ -511,6 +512,9 @@ $("bStart").onclick=()=>show("menu");
 $("adm").onclick=()=>{$("pass").hidden=!$("pass").hidden;$("pw").value="";$("pwErr").textContent=""};
 $("pwOk").onclick=()=>{if($("pw").value==="198505"){$("pass").hidden=true;show("admin")}else $("pwErr").textContent="パスワードがちがいます"};
 $("bAdd").onclick=()=>{S.coins+=100;save();ui()};$("bAdd1k").onclick=()=>{S.coins+=1000;save();ui()};$("bAdd10k").onclick=()=>{S.coins+=10000;save();ui()};$("bAdd100k").onclick=()=>{S.coins+=100000;save();ui()};
+const ADMIN_STARTS=[70];   // 管理者のテスト開始階（追加はここに足す）
+$("admStart").innerHTML=ADMIN_STARTS.map(f=>`<button data-af="${f}" style="background:#d6336c">🛠️ ${f}階から開始（テスト）</button>`).join("");
+$("admStart").onclick=e=>{const b=e.target.closest("button");if(b&&b.dataset.af)start(+b.dataset.af,true)};
 $("bToMenu").onclick=()=>show("menu");
 $("bRMenu").onclick=()=>{G.floor=1;G.en=null;show("menu")};
 // ===== 管理者：モンスター属性カラー確認（プレビュー画像だけにfilterを適用。画像ファイル・戦闘画面は変更しない） =====
